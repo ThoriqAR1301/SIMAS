@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
 
 class Lampiran extends Model
@@ -21,7 +22,10 @@ class Lampiran extends Model
 
     public function url(): string
     {
-        return Storage::disk('public')->url($this->path);
+        /** @var FilesystemAdapter $disk */
+        $disk = Storage::disk('public');
+
+        return $disk->url($this->path);
     }
 
     public function ukuranFormat(): string
@@ -33,6 +37,7 @@ class Lampiran extends Model
             $bytes /= 1024;
             $i++;
         }
-        return round($bytes, 2) . ' ' . $units[$i];
+
+        return round($bytes, 2).' '.$units[$i];
     }
 }

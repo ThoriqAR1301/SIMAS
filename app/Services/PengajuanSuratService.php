@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\DB;
 class PengajuanSuratService
 {
     public function __construct(
-        private NomorSuratService  $nomorService,
-        private FileUploadService  $fileService,
+        private NomorSuratService $nomorService,
+        private FileUploadService $fileService,
     ) {}
 
     public function buat(User $user, array $data): PengajuanSurat
@@ -33,7 +33,7 @@ class PengajuanSuratService
                 'current_step' => 0,
             ]);
 
-            if (!empty($data['lampiran'])) {
+            if (! empty($data['lampiran'])) {
                 $this->simpanLampiran($pengajuan, $data['lampiran']);
             }
 
@@ -43,7 +43,7 @@ class PengajuanSuratService
 
     public function update(PengajuanSurat $pengajuan, array $data): PengajuanSurat
     {
-        if (!$pengajuan->bisaDiedit()) {
+        if (! $pengajuan->bisaDiedit()) {
             throw new \RuntimeException('Pengajuan Tidak Bisa Diedit Pada Status Ini');
         }
 
@@ -59,7 +59,7 @@ class PengajuanSuratService
                 'keterangan' => $data['keterangan'] ?? $pengajuan->keterangan,
             ]);
 
-            if (!empty($data['lampiran'])) {
+            if (! empty($data['lampiran'])) {
                 $this->simpanLampiran($pengajuan, $data['lampiran']);
             }
 
@@ -69,14 +69,14 @@ class PengajuanSuratService
 
     public function submit(PengajuanSurat $pengajuan): PengajuanSurat
     {
-        if (!$pengajuan->bisaDiajukan()) {
+        if (! $pengajuan->bisaDiajukan()) {
             throw new \RuntimeException('Pengajuan Tidak Bisa Diajukan Pada Status Ini');
         }
 
         DB::transaction(function () use ($pengajuan) {
             $pengajuan->update([
                 'status' => StatusPengajuan::DIAJUKAN,
-                'current_step' => 1,  
+                'current_step' => 1,
                 'reviewed_by' => null,
                 'reviewed_at' => null,
                 'catatan_reviewer' => null,
@@ -90,7 +90,7 @@ class PengajuanSuratService
 
     public function hapus(PengajuanSurat $pengajuan): void
     {
-        if (!$pengajuan->bisaDihapus()) {
+        if (! $pengajuan->bisaDihapus()) {
             throw new \RuntimeException('Pengajuan Tidak Bisa Dihapus Pada Status Ini');
         }
 

@@ -1,63 +1,89 @@
 <?php
 
 use App\Enums\StatusPengajuan;
-use App\Models\ApprovalLog;
+use App\Models\BlankoSurat;
 use App\Models\PengajuanSurat;
 use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\BlankoSuratSeeder;
+use Database\Seeders\PengaturanSeeder;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\RolePermissionSeeder;
+use Database\Seeders\RoleSeeder;
 
-beforeEach(function () {
-    $this->seed(\Database\Seeders\RoleSeeder::class);
-    $this->seed(\Database\Seeders\PermissionSeeder::class);
-    $this->seed(\Database\Seeders\RolePermissionSeeder::class);
-    $this->seed(\Database\Seeders\BlankoSuratSeeder::class);
-    $this->seed(\Database\Seeders\PengaturanSeeder::class);
+/**
+ * @return array{guru: User, admin: User, pimpinan: User, pengajuan: PengajuanSurat}
+ */
+function createApprovalTestData(): array
+{
+    (new RoleSeeder)->run();
+    (new PermissionSeeder)->run();
+    (new RolePermissionSeeder)->run();
+    (new BlankoSuratSeeder)->run();
+    (new PengaturanSeeder)->run();
 
-    $this->guru = User::factory()->create(['role_id' => Role::where('name', 'guru')->value('id')]);
-    $this->admin = User::factory()->create(['role_id' => Role::where('name', 'admin_tu')->value('id')]);
-    $this->pimpinan = User::factory()->create(['role_id' => Role::where('name', 'pimpinan')->value('id')]);
-
-    $this->pengajuan = PengajuanSurat::factory()->create([
-        'user_id' => $this->guru->id,
-        'blanko_id' => \App\Models\BlankoSurat::first()->id,
+    $guru = User::factory()->create(['role_id' => Role::where('name', 'guru')->value('id')]);
+    $admin = User::factory()->create(['role_id' => Role::where('name', 'admin_tu')->value('id')]);
+    $pimpinan = User::factory()->create(['role_id' => Role::where('name', 'pimpinan')->value('id')]);
+    $blanko = BlankoSurat::query()->firstOrFail();
+    $pengajuan = PengajuanSurat::factory()->create([
+        'user_id' => $guru->id,
+        'blanko_id' => $blanko->id,
         'status' => StatusPengajuan::DIAJUKAN,
         'current_step' => 1,
     ]);
-});
+
+    return compact('guru', 'admin', 'pimpinan', 'pengajuan');
+}
 
 it('Admin Bisa Verifikasi Pengajuan → Lanjut ke Pimpinan', function () {
-    $this->actingAs($this->admin)->post(route('approval.verify', $this->pengajuan), ['catatan' => 'OK']);
+    $data = createApprovalTestData();
+    $admin = $data['admin'];
+    $pengajuan = $data['pengajuan'];
 
-    $this->pengajuan->refresh();
-    expect($this->pengajuan->status)->toBe(StatusPengajuan::DIPROSES)->and($this->pengajuan->current_step)->toBe(2);
+    $this->actingAs($admin)->post(route('approval.verify', $pengajuan), ['catatan' => 'OK']);
+
+    $pengajuan->refresh();
+    expect($pengajuan->status)->toBe(StatusPengajuan::DIPROSES)->and($pengajuan->current_step)->toBe(2);
 
     $this->assertDatabaseHas('approval_log', [
-        'pengajuan_id' => $this->pengajuan->id,
+        'pengajuan_id' => $pengajuan->id,
         'step' => 1,
         'aksi' => 'approve',
-        'approver_id' => $this->admin->id,
+        'approver_id' => $admin->id,
     ]);
 });
 
 it('Pimpinan Approve → Generate Nomor Surat & QR', function () {
-    $this->actingAs($this->admin)->post(route('approval.verify', $this->pengajuan), ['catatan' => 'OK']);
+    $data = createApprovalTestData();
+    $admin = $data['admin'];
+    $pimpinan = $data['pimpinan'];
+    $pengajuan = $data['pengajuan'];
 
-    $this->actingAs($this->pimpinan)->post(route('approval.approve', $this->pengajuan->fresh()), ['catatan' => 'Setuju']);
+    $this->actingAs($admin)->post(route('approval.verify', $pengajuan), ['catatan' => 'OK']);
 
-    $p = $this->pengajuan->fresh();
+    $this->actingAs($pimpinan)->post(route('approval.approve', $pengajuan->fresh()), ['catatan' => 'Setuju']);
+
+    $p = $pengajuan->fresh();
     expect($p->status)->toBe(StatusPengajuan::DISETUJUI)->and($p->current_step)->toBe(3)->and($p->nomor_surat)->not->toBeNull()->and($p->qr_token)->not->toBeNull();
 });
 
 it('Admin Tidak Bisa Approve Langsung Tanpa Verifikasi', function () {
-    $this->actingAs($this->admin)->post(route('approval.approve', $this->pengajuan))->assertForbidden();
+    $data = createApprovalTestData();
+
+    $this->actingAs($data['admin'])->post(route('approval.approve', $data['pengajuan']))->assertForbidden();
 });
 
 it('Guru Tidak Bisa Akses Halaman Approval', function () {
-    $this->actingAs($this->guru)->get(route('approval.index'))->assertForbidden();
+    $data = createApprovalTestData();
+
+    $this->actingAs($data['guru'])->get(route('approval.index'))->assertForbidden();
 });
 
 it('Reject Mengubah Status Jadi DITOLAK', function () {
-    $this->actingAs($this->admin)->post(route('approval.reject', $this->pengajuan), ['catatan' => 'Kurang Lengkap']);
+    $data = createApprovalTestData();
 
-    expect($this->pengajuan->fresh()->status)->toBe(StatusPengajuan::DITOLAK);
+    $this->actingAs($data['admin'])->post(route('approval.reject', $data['pengajuan']), ['catatan' => 'Kurang Lengkap']);
+
+    expect($data['pengajuan']->fresh()->status)->toBe(StatusPengajuan::DITOLAK);
 });

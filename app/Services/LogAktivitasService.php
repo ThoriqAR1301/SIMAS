@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\LogAktivitas;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class LogAktivitasService
 {
@@ -14,7 +15,7 @@ class LogAktivitasService
         ?array $after = null,
     ): void {
         LogAktivitas::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'aksi' => $aksi,
             'model_type' => $model ? get_class($model) : null,
             'model_id' => $model?->getKey(),

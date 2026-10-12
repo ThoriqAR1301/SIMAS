@@ -8,6 +8,7 @@ use App\Models\BlankoSurat;
 use App\Models\PengajuanSurat;
 use App\Services\LogAktivitasService;
 use App\Services\PengajuanSuratService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
 class PengajuanSuratController extends Controller
@@ -19,7 +20,16 @@ class PengajuanSuratController extends Controller
 
     public function index(Request $request)
     {
-        $query = PengajuanSurat::with(['blanko', 'user'])->when(auth()->user()->isGuru(), fn ($q) => $q->milik(auth()->id()))->when($request->status, fn ($q, $s) => $q->status($s))->when($request->q, fn ($q, $k) => $q->cari($k))->when($request->dari || $request->sampai, fn ($q) => $q->rentangTanggal($request->dari, $request->sampai))->latest();
+        $user = $this->authenticatedUser();
+        $query = PengajuanSurat::with(['blanko', 'user'])
+            ->when($user->isGuru(), fn ($query) => $query->milik((int) $user->getKey()))
+            ->when($request->status, fn ($query, $status) => $query->status($status))
+            ->when($request->q, fn ($query, $keyword) => $query->cari($keyword))
+            ->when(
+                $request->dari || $request->sampai,
+                fn ($query) => $query->rentangTanggal($request->dari, $request->sampai),
+            )
+            ->latest();
 
         return view('pengajuan.index', [
             'pengajuan' => $query->paginate(15)->withQueryString(),
@@ -38,12 +48,13 @@ class PengajuanSuratController extends Controller
 
     public function store(StorePengajuanRequest $request)
     {
-        $pengajuan = $this->service->buat(auth()->user(), $request->validated());
+        $pengajuan = $this->service->buat($this->authenticatedUser(), $request->validated());
 
         $this->logService->catat('create', $pengajuan, null, $pengajuan->toArray());
 
         if ($request->input('aksi') === 'submit') {
             $this->service->submit($pengajuan);
+
             return redirect()->route('pengajuan.show', $pengajuan)->with('success', 'Pengajuan Berhasil Diajukan & Menunggu Verifikasi');
         }
 
@@ -83,6 +94,7 @@ class PengajuanSuratController extends Controller
 
         if ($request->input('aksi') === 'submit') {
             $this->service->submit($pengajuan);
+
             return redirect()->route('pengajuan.show', $pengajuan)->with('success', 'Pengajuan Berhasil Diperbarui & Diajukan');
         }
 
@@ -135,15 +147,15 @@ class PengajuanSuratController extends Controller
 
         $pengajuan->load(['user', 'blanko', 'reviewer']);
 
-        $qrPath = storage_path('app/public/qr/' . $pengajuan->qr_token . '.png');
+        $qrPath = storage_path('app/public/qr/'.$pengajuan->qr_token.'.png');
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pengajuan.pdf', [
+        $pdf = Pdf::loadView('pengajuan.pdf', [
             'pengajuan' => $pengajuan,
-            'qrPath'    => file_exists($qrPath) ? $qrPath : null,
+            'qrPath' => file_exists($qrPath) ? $qrPath : null,
         ])->setPaper('a4', 'portrait');
 
-        $filename = 'Surat-' . str_replace('/', '-', $pengajuan->nomor_surat) . '.pdf';
+        $filename = 'Surat-'.str_replace('/', '-', $pengajuan->nomor_surat).'.pdf';
 
         return $pdf->download($filename);
-}
+    }
 }

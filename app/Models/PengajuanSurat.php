@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\StatusPengajuan;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class PengajuanSurat extends Model
 {
@@ -22,7 +23,7 @@ class PengajuanSurat extends Model
 
     protected $casts = [
         'tanggal_pelaksanaan' => 'date',
-        'reviewed_at'  => 'datetime',
+        'reviewed_at' => 'datetime',
         'qr_generated_at' => 'datetime',
         'status' => StatusPengajuan::class,
         'current_step' => 'integer',
@@ -53,11 +54,7 @@ class PengajuanSurat extends Model
     {
         return $this->morphMany(Lampiran::class, 'attachable');
     }
-
-    public function suratIzin()
-    {
-        return $this->hasOne(SuratIzin::class, 'pengajuan_id');
-    }
+    
 
     public function scopeMilik($query, int $userId)
     {
@@ -67,6 +64,7 @@ class PengajuanSurat extends Model
     public function scopeStatus($query, StatusPengajuan|string $status)
     {
         $value = $status instanceof StatusPengajuan ? $status->value : $status;
+
         return $query->where('status', $value);
     }
 
@@ -83,9 +81,9 @@ class PengajuanSurat extends Model
     {
         return $query->where(function ($q) use ($keyword) {
             $q->where('nomor_pengajuan', 'like', "%{$keyword}%")
-              ->orWhere('nomor_surat', 'like', "%{$keyword}%")
-              ->orWhere('nama_kegiatan', 'like', "%{$keyword}%")
-              ->orWhere('jenis_surat', 'like', "%{$keyword}%");
+                ->orWhere('nomor_surat', 'like', "%{$keyword}%")
+                ->orWhere('nama_kegiatan', 'like', "%{$keyword}%")
+                ->orWhere('jenis_surat', 'like', "%{$keyword}%");
         });
     }
 
@@ -96,17 +94,29 @@ class PengajuanSurat extends Model
 
     public function bisaDiedit(): bool
     {
-        return $this->status->bisaDiedit() && $this->user_id === auth()->id();
+        $user = Auth::user();
+
+        return $this->status->bisaDiedit()
+            && $user instanceof User
+            && $this->user_id === $user->getKey();
     }
 
     public function bisaDiajukan(): bool
     {
-        return $this->status->bisaDiajukan() && $this->user_id === auth()->id();
+        $user = Auth::user();
+
+        return $this->status->bisaDiajukan()
+            && $user instanceof User
+            && $this->user_id === $user->getKey();
     }
 
     public function bisaDihapus(): bool
     {
-        return $this->status->bisaDihapus() && $this->user_id === auth()->id();
+        $user = Auth::user();
+
+        return $this->status->bisaDihapus()
+            && $user instanceof User
+            && $this->user_id === $user->getKey();
     }
 
     public function sudahDisetujui(): bool

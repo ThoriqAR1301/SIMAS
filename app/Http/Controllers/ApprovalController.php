@@ -12,7 +12,8 @@ class ApprovalController extends Controller
 
     public function index()
     {
-        $step = auth()->user()->isAdminTu() ? 1 : 2;
+        $user = $this->authenticatedUser();
+        $step = $user->isAdminTu() ? 1 : 2;
 
         $pengajuan = PengajuanSurat::with(['user', 'blanko'])->menungguApproval($step)->latest()->paginate(15);
 
@@ -27,7 +28,7 @@ class ApprovalController extends Controller
             'catatan' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $this->service->verifikasiAdmin($pengajuan, auth()->user(), $data['catatan'] ?? null);
+        $this->service->verifikasiAdmin($pengajuan, $this->authenticatedUser(), $data['catatan'] ?? null);
 
         return back()->with('success', 'Pengajuan Diteruskan Ke Pimpinan');
     }
@@ -40,7 +41,7 @@ class ApprovalController extends Controller
             'catatan' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $this->service->approvePimpinan($pengajuan, auth()->user(), $data['catatan'] ?? null);
+        $this->service->approvePimpinan($pengajuan, $this->authenticatedUser(), $data['catatan'] ?? null);
 
         return back()->with('success', 'Pengajuan Disetujui & Nomor Surat Telah Di-Generate');
     }
@@ -55,12 +56,12 @@ class ApprovalController extends Controller
         abort_unless(in_array($step, [1, 2]), 403);
 
         if ($step === 1) {
-            abort_unless(auth()->user()->isAdminTu(), 403);
+            abort_unless($this->authenticatedUser()->isAdminTu(), 403);
         } else {
-            abort_unless(auth()->user()->isPimpinan(), 403);
+            abort_unless($this->authenticatedUser()->isPimpinan(), 403);
         }
 
-        $this->service->reject($pengajuan, auth()->user(), $data['catatan']);
+        $this->service->reject($pengajuan, $this->authenticatedUser(), $data['catatan']);
 
         return back()->with('success', 'Pengajuan Ditolak');
     }
@@ -71,7 +72,7 @@ class ApprovalController extends Controller
             'catatan' => ['required', 'string', 'max:1000'],
         ]);
 
-        $this->service->mintaRevisi($pengajuan, auth()->user(), $data['catatan']);
+        $this->service->mintaRevisi($pengajuan, $this->authenticatedUser(), $data['catatan']);
 
         return back()->with('success', 'Pengajuan Dikembalikan Ke Guru Untuk Direvisi');
     }

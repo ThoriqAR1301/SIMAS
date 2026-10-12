@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Pengaturan;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class NomorSuratService
 {
@@ -12,11 +13,15 @@ class NomorSuratService
         $now = Carbon::now();
         $prefix = sprintf('PGJ/%s/%s/', $now->year, $now->format('m'));
 
-        $last = \DB::table('pengajuan_surat')->where('nomor_pengajuan', 'like', $prefix . '%')->orderByDesc('nomor_pengajuan')->lockForUpdate()->value('nomor_pengajuan');
+        $last = DB::table('pengajuan_surat')
+            ->where('nomor_pengajuan', 'like', $prefix.'%')
+            ->orderByDesc('nomor_pengajuan')
+            ->lockForUpdate()
+            ->value('nomor_pengajuan');
 
         $seq = $last ? ((int) substr($last, -4)) + 1 : 1;
 
-        return $prefix . str_pad($seq, 4, '0', STR_PAD_LEFT);
+        return $prefix.str_pad($seq, 4, '0', STR_PAD_LEFT);
     }
 
     public function generateNomorSurat(string $kodeBlanko): string
@@ -28,7 +33,12 @@ class NomorSuratService
 
         $romawi = $this->bulanRomawi($now->month);
 
-        $query = \DB::table('pengajuan_surat')->where('nomor_surat', 'not like', 'PGJ/%')->whereNotNull('nomor_surat')->where('nomor_surat', 'like', "%/{$kodeBlanko}/%")->whereYear('created_at', $now->year)->lockForUpdate();
+        $query = DB::table('pengajuan_surat')
+            ->where('nomor_surat', 'not like', 'PGJ/%')
+            ->whereNotNull('nomor_surat')
+            ->where('nomor_surat', 'like', "%/{$kodeBlanko}/%")
+            ->whereYear('created_at', $now->year)
+            ->lockForUpdate();
 
         if ($reset === 'bulanan') {
             $query->whereMonth('created_at', $now->month);

@@ -66,7 +66,7 @@ class ApprovalService
                 'reviewed_at' => now(),
                 'catatan_reviewer' => $catatan,
                 'qr_token' => $qrToken,
-                'qr_generated_at'  => now(),
+                'qr_generated_at' => now(),
             ]);
 
             $this->qrService->generateQrImage($qrToken);
@@ -95,7 +95,7 @@ class ApprovalService
         string $catatan,
     ): void {
         $step = $pengajuan->current_step;
-        if (!in_array($step, [1, 2])) {
+        if (! in_array($step, [1, 2])) {
             throw new \RuntimeException('Pengajuan Tidak Dalam Tahap Approval');
         }
 
@@ -126,13 +126,13 @@ class ApprovalService
         string $catatan,
     ): void {
         $step = $pengajuan->current_step;
-        if (!in_array($step, [1, 2])) {
+        if (! in_array($step, [1, 2])) {
             throw new \RuntimeException('Pengajuan Tidak Dalam Tahap Approval');
         }
 
         DB::transaction(function () use ($pengajuan, $approver, $catatan, $step) {
             $pengajuan->update([
-                'status' => StatusPengajuan::DRAFT,   
+                'status' => StatusPengajuan::DRAFT,
                 'current_step' => 0,
                 'reviewed_by' => $approver->id,
                 'reviewed_at' => now(),

@@ -135,4 +135,16 @@ class PengajuanSurat extends Model
             default => '-',
         };
     }
+
+    public function scopeFilterIndex($query, array $filters, User $user)
+    {
+        return $query
+            ->with(['blanko', 'user'])
+            ->when($user->isGuru(), fn ($q) => $q->milik($user->id))
+            ->when($filters['status'] ?? null, fn ($q, $s) => $q->status($s))
+            ->when($filters['q'] ?? null, fn ($q, $k) => $q->cari($k))
+            ->when(($filters['dari'] ?? null) || ($filters['sampai'] ?? null),
+                fn ($q) => $q->rentangTanggal($filters['dari'] ?? null, $filters['sampai'] ?? null))
+            ->latest();
+    }
 }

@@ -20,19 +20,13 @@ class PengajuanSuratController extends Controller
 
     public function index(Request $request)
     {
-        $user = $this->authenticatedUser();
-        $query = PengajuanSurat::with(['blanko', 'user'])
-            ->when($user->isGuru(), fn ($query) => $query->milik((int) $user->getKey()))
-            ->when($request->status, fn ($query, $status) => $query->status($status))
-            ->when($request->q, fn ($query, $keyword) => $query->cari($keyword))
-            ->when(
-                $request->dari || $request->sampai,
-                fn ($query) => $query->rentangTanggal($request->dari, $request->sampai),
-            )
-            ->latest();
+        $pengajuan = PengajuanSurat::filterIndex(
+            $request->only(['status', 'q', 'dari', 'sampai']),
+            $this->authenticatedUser(),
+        )->paginate(15)->withQueryString();
 
         return view('pengajuan.index', [
-            'pengajuan' => $query->paginate(15)->withQueryString(),
+            'pengajuan' => $pengajuan,
             'filters' => $request->only(['status', 'q', 'dari', 'sampai']),
         ]);
     }

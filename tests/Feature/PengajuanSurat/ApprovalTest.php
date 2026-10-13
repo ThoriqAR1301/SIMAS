@@ -1,6 +1,9 @@
 <?php
 
 use App\Enums\StatusPengajuan;
+use App\Events\PengajuanApproved;
+use App\Events\PengajuanNomorGenerated;
+use App\Events\PengajuanStatusChanged;
 use App\Models\BlankoSurat;
 use App\Models\PengajuanSurat;
 use App\Models\Role;
@@ -10,6 +13,7 @@ use Database\Seeders\PengaturanSeeder;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Support\Facades\Event;
 
 /**
  * @return array{guru: User, admin: User, pimpinan: User, pengajuan: PengajuanSurat}
@@ -60,12 +64,22 @@ it('Pimpinan Approve → Generate Nomor Surat & QR', function () {
     $pimpinan = $data['pimpinan'];
     $pengajuan = $data['pengajuan'];
 
+    Event::fake([
+        PengajuanApproved::class,
+        PengajuanNomorGenerated::class,
+        PengajuanStatusChanged::class,
+    ]);
+
     $this->actingAs($admin)->post(route('approval.verify', $pengajuan), ['catatan' => 'OK']);
 
     $this->actingAs($pimpinan)->post(route('approval.approve', $pengajuan->fresh()), ['catatan' => 'Setuju']);
 
     $p = $pengajuan->fresh();
     expect($p->status)->toBe(StatusPengajuan::DISETUJUI)->and($p->current_step)->toBe(3)->and($p->nomor_surat)->not->toBeNull()->and($p->qr_token)->not->toBeNull();
+
+    Event::assertDispatched(PengajuanApproved::class, 2);
+    Event::assertDispatched(PengajuanNomorGenerated::class);
+    Event::assertDispatched(PengajuanStatusChanged::class, 4);
 });
 
 it('Admin Tidak Bisa Approve Langsung Tanpa Verifikasi', function () {

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\StatusPengajuan;
+use App\Events\PengajuanStatusChanged;
 use App\Events\PengajuanSubmitted;
 use App\Models\PengajuanSurat;
 use App\Models\User;
@@ -83,9 +84,13 @@ class PengajuanSuratService
             ]);
         });
 
-        event(new PengajuanSubmitted($pengajuan->fresh()));
+        $fresh = $pengajuan->fresh();
 
-        return $pengajuan->fresh();
+        event(new PengajuanSubmitted($fresh));
+
+        broadcast(new PengajuanStatusChanged($fresh, 'admin_tu', 'submitted'))->toOthers();
+
+        return $fresh;
     }
 
     public function hapus(PengajuanSurat $pengajuan): void

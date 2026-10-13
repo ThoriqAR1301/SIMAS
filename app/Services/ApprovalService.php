@@ -6,6 +6,7 @@ use App\Enums\StatusPengajuan;
 use App\Events\PengajuanApproved;
 use App\Events\PengajuanNomorGenerated;
 use App\Events\PengajuanRejected;
+use App\Events\PengajuanStatusChanged;
 use App\Models\ApprovalLog;
 use App\Models\PengajuanSurat;
 use App\Models\User;
@@ -25,7 +26,7 @@ class ApprovalService
     ): void {
         $this->pastikanStep($pengajuan, 1);
 
-        DB::transaction(function () use ($pengajuan, $admin, $catatan) {
+        $fresh = DB::transaction(function () use ($pengajuan, $admin, $catatan) {
             $pengajuan->update([
                 'status' => StatusPengajuan::DIPROSES,
                 'current_step' => 2,
@@ -42,9 +43,13 @@ class ApprovalService
                 'catatan' => $catatan,
                 'acted_at' => now(),
             ]);
+
+            return $pengajuan->refresh();
         });
 
-        event(new PengajuanApproved($pengajuan->fresh(), 1));
+        broadcast(new PengajuanStatusChanged($fresh, 'pimpinan', 'verified'))->toOthers();
+        broadcast(new PengajuanStatusChanged($fresh, 'guru', 'verified'))->toOthers();
+        event(new PengajuanApproved($fresh, 1));
     }
 
     public function approvePimpinan(
@@ -54,7 +59,7 @@ class ApprovalService
     ): PengajuanSurat {
         $this->pastikanStep($pengajuan, 2);
 
-        return DB::transaction(function () use ($pengajuan, $pimpinan, $catatan) {
+        $fresh = DB::transaction(function () use ($pengajuan, $pimpinan, $catatan) {
             $nomorSurat = $this->nomorService->generateNomorSurat($pengajuan->blanko->kode);
             $qrToken = $this->qrService->generateToken();
 
@@ -80,13 +85,15 @@ class ApprovalService
                 'acted_at' => now(),
             ]);
 
-            $fresh = $pengajuan->fresh();
-
-            event(new PengajuanNomorGenerated($fresh));
-            event(new PengajuanApproved($fresh, 2));
-
-            return $fresh;
+            return $pengajuan->refresh();
         });
+
+        broadcast(new PengajuanStatusChanged($fresh, 'guru', 'approved'))->toOthers();
+        broadcast(new PengajuanStatusChanged($fresh, 'admin_tu', 'approved'))->toOthers();
+        event(new PengajuanNomorGenerated($fresh));
+        event(new PengajuanApproved($fresh, 2));
+
+        return $fresh;
     }
 
     public function reject(
@@ -99,7 +106,7 @@ class ApprovalService
             throw new \RuntimeException('Pengajuan Tidak Dalam Tahap Approval');
         }
 
-        DB::transaction(function () use ($pengajuan, $approver, $catatan, $step) {
+        $fresh = DB::transaction(function () use ($pengajuan, $approver, $catatan, $step) {
             $pengajuan->update([
                 'status' => StatusPengajuan::DITOLAK,
                 'reviewed_by' => $approver->id,
@@ -115,9 +122,12 @@ class ApprovalService
                 'catatan' => $catatan,
                 'acted_at' => now(),
             ]);
+
+            return $pengajuan->refresh();
         });
 
-        event(new PengajuanRejected($pengajuan->fresh()));
+        broadcast(new PengajuanStatusChanged($fresh, 'guru', 'rejected'))->toOthers();
+        event(new PengajuanRejected($fresh));
     }
 
     public function mintaRevisi(
@@ -130,7 +140,7 @@ class ApprovalService
             throw new \RuntimeException('Pengajuan Tidak Dalam Tahap Approval');
         }
 
-        DB::transaction(function () use ($pengajuan, $approver, $catatan, $step) {
+        $fresh = DB::transaction(function () use ($pengajuan, $approver, $catatan, $step) {
             $pengajuan->update([
                 'status' => StatusPengajuan::DRAFT,
                 'current_step' => 0,
@@ -147,7 +157,11 @@ class ApprovalService
                 'catatan' => $catatan,
                 'acted_at' => now(),
             ]);
+
+            return $pengajuan->refresh();
         });
+
+        broadcast(new PengajuanStatusChanged($fresh, 'guru', 'revisi'))->toOthers();
     }
 
     private function pastikanStep(PengajuanSurat $pengajuan, int $expectedStep): void

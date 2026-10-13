@@ -44,4 +44,30 @@
             </x-primary-button>
         </div>
     </form>
+
+    @if(config('app.env') === 'local')
+        <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <p class="text-xs text-center text-gray-500 mb-3">Quick Login (Demo)</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" onclick="quickLogin('aesa@simas.test')" class="px-3 py-2 text-xs rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium transition">
+                        👩‍💼 Admin TU
+                    </button>
+                    <button type="button" onclick="quickLogin('kepsek@simas.test')" class="px-3 py-2 text-xs rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium transition">
+                        👨‍💼 Pimpinan
+                    </button>
+                    <button type="button" onclick="quickLogin('ahmad@simas.test')" class="px-3 py-2 text-xs rounded-lg bg-green-50 hover:bg-green-100 text-green-700 font-medium transition">
+                        👨‍🏫 Guru
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function quickLogin(email) {
+                document.querySelector('input[name="email"]').value = email;
+                document.querySelector('input[name="password"]').value = 'password';
+                document.querySelector('form').submit();
+            }
+        </script>
+    @endif
 </x-guest-layout>

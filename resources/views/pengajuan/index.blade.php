@@ -88,8 +88,12 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-4 py-8 text-center text-gray-500">
-                                    Belum Ada Pengajuan
+                                <td colspan="6">
+                                    <x-empty-state
+                                        title="Belum Ada Pengajuan"
+                                        description="Mulai Dengan Membuat Pengajuan Surat Pertama Anda"
+                                        action-label="Buat Pengajuan"
+                                        action-url="{{ route('pengajuan.create') }}" />
                                 </td>
                             </tr>
                         @endforelse

@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('jenis_surat', 50);
             $table->text('keterangan')->nullable();
 
-            $table->enum('status', ['draft', 'diajukan', 'diproses','disetujui', 'ditolak', 'selesai',])->default('draft');
+            $table->enum('status', ['draft', 'diajukan', 'diproses', 'disetujui', 'ditolak', 'selesai'])->default('draft');
             $table->tinyInteger('current_step')->default(0);
             $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('reviewed_at')->nullable();

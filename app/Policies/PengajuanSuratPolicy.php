@@ -17,6 +17,7 @@ class PengajuanSuratPolicy
         if ($user->isGuru()) {
             return $pengajuan->user_id === $user->id;
         }
+
         return true;
     }
 

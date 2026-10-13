@@ -6,7 +6,6 @@ use App\Enums\StatusPengajuan;
 use App\Models\ApprovalLog;
 use App\Models\BlankoSurat;
 use App\Models\PengajuanSurat;
-use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -19,8 +18,9 @@ class DemoPengajuanSeeder extends Seeder
         $pimpinan = User::whereHas('role', fn ($q) => $q->where('name', 'pimpinan'))->first();
         $blanko = BlankoSurat::first();
 
-        if ($guruList->isEmpty() || !$admin || !$pimpinan || !$blanko) {
+        if ($guruList->isEmpty() || ! $admin || ! $pimpinan || ! $blanko) {
             $this->command->warn('⚠️  Skip DemoPengajuanSeeder : User/Blanko Belum Lengkap');
+
             return;
         }
 
@@ -99,7 +99,7 @@ class DemoPengajuanSeeder extends Seeder
                 'user_id' => $guru->id,
                 'blanko_id' => $blanko->id,
                 'nama_kegiatan' => $kegiatan,
-                'nomor_surat' => "{$seq}/ST/TU/X/" . now()->year,
+                'nomor_surat' => "{$seq}/ST/TU/X/".now()->year,
                 'reviewed_by' => $pimpinan->id,
                 'reviewed_at' => now()->subDays(rand(1, 5)),
                 'created_at' => now()->subDays(rand(5, 10)),

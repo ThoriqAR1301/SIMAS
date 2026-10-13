@@ -12,7 +12,7 @@ class FileUploadService
     {
         $namaAsli = $file->getClientOriginalName();
         $ext = $file->getClientOriginalExtension();
-        $namaSimpan = Str::uuid() . '.' . $ext;
+        $namaSimpan = Str::uuid().'.'.$ext;
 
         $path = $file->storeAs($folder, $namaSimpan, 'public');
 
@@ -39,6 +39,7 @@ class FileUploadService
                 $result[] = $this->simpan($file, $folder);
             }
         }
+
         return $result;
     }
 }

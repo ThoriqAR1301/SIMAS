@@ -6,13 +6,14 @@ use App\Enums\StatusPengajuan;
 use App\Models\BlankoSurat;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class PengajuanSuratFactory extends Factory
 {
     public function definition(): array
     {
         return [
-            'nomor_pengajuan' => 'PGJ/' . now()->year . '/' . now()->format('m') . '/' . str_pad(fake()->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
+            'nomor_pengajuan' => 'PGJ/'.now()->year.'/'.now()->format('m').'/'.str_pad(fake()->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
             'nomor_surat' => null,
             'user_id' => User::factory(),
             'blanko_id' => BlankoSurat::factory(),
@@ -49,8 +50,8 @@ class PengajuanSuratFactory extends Factory
         return $this->state([
             'status' => StatusPengajuan::DISETUJUI,
             'current_step' => 3,
-            'nomor_surat' => '001/TEST/TU/X/' . now()->year,
-            'qr_token' => (string) \Illuminate\Support\Str::uuid(),
+            'nomor_surat' => '001/TEST/TU/X/'.now()->year,
+            'qr_token' => (string) Str::uuid(),
         ]);
     }
 }

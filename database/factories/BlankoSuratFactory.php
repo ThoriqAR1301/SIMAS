@@ -10,9 +10,10 @@ class BlankoSuratFactory extends Factory
     public function definition(): array
     {
         $nama = fake()->unique()->words(2, true);
+
         return [
-            'kode' => 'BLK-' . strtoupper(Str::random(5)),
-            'nama' => 'Blanko ' . $nama,
+            'kode' => 'BLK-'.strtoupper(Str::random(5)),
+            'nama' => 'Blanko '.$nama,
             'deskripsi' => fake()->sentence(),
             'jenis' => 'tugas',
             'requires_lampiran' => false,

@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('approval_log', function (Blueprint $table) {
             $table->id();
             $table->foreignId('pengajuan_id')->constrained('pengajuan_surat')->cascadeOnDelete();
-            $table->tinyInteger('step');                       
+            $table->tinyInteger('step');
             $table->foreignId('approver_id')->constrained('users')->restrictOnDelete();
             $table->enum('aksi', ['approve', 'reject', 'revisi']);
             $table->text('catatan')->nullable();

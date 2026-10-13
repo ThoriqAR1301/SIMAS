@@ -29,7 +29,6 @@ class PengajuanSurat extends Model
         'current_step' => 'integer',
     ];
 
-
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -54,7 +53,6 @@ class PengajuanSurat extends Model
     {
         return $this->morphMany(Lampiran::class, 'attachable');
     }
-    
 
     public function scopeMilik($query, int $userId)
     {

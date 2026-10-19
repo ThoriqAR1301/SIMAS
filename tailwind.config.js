@@ -69,18 +69,20 @@ export default {
 
             boxShadow: {
                 'soft': '0 2px 8px -2px rgba(30, 42, 90, 0.08), 0 4px 16px -4px rgba(30, 42, 90, 0.06)',
-                'card': '0 4px 24px -8px rgba(30, 42, 90, 0.12), 0 2px 8px -4px rgba(30, 42, 90, 0.06)',
-                'lift': '0 12px 40px -12px rgba(30, 42, 90, 0.20), 0 4px 16px -6px rgba(30, 42, 90, 0.10)',
-                'glow-gold': '0 0 0 3px rgba(244, 178, 46, 0.20)',
-                'glow-navy': '0 0 0 3px rgba(30, 42, 90, 0.12)',
+                'card': '0 8px 30px -4px rgba(30, 42, 90, 0.08), 0 0 0 1px rgba(30, 42, 90, 0.03)',
+                'lift': '0 20px 40px -12px rgba(30, 42, 90, 0.15), 0 0 0 1px rgba(30, 42, 90, 0.05)',
+                'glow-gold': '0 0 0 3px rgba(244, 178, 46, 0.20), 0 8px 24px -4px rgba(244, 178, 46, 0.4)',
+                'glow-navy': '0 0 0 3px rgba(30, 42, 90, 0.12), 0 8px 24px -4px rgba(30, 42, 90, 0.3)',
                 'inner-nav': 'inset 0 1px 0 0 rgba(255,255,255,0.06)',
+                'glass': 'inset 0 1px 0 0 rgba(255,255,255,0.5), 0 4px 30px rgba(0, 0, 0, 0.05)',
             },
 
             backgroundImage: {
                 'gradient-brand': 'linear-gradient(135deg, #2B3567 0%, #1E2A5A 50%, #151D3F 100%)',
                 'gradient-gold': 'linear-gradient(135deg, #F4B22E 0%, #D99A1A 100%)',
                 'gradient-premium': 'linear-gradient(135deg, #2B3567 0%, #151D3F 60%, #1E2A5A 100%)',
-                'gradient-mesh': 'radial-gradient(at 20% 0%, rgba(244,178,46,0.12) 0%, transparent 50%), radial-gradient(at 100% 100%, rgba(30,42,90,0.15) 0%, transparent 50%)',
+                'gradient-mesh': 'radial-gradient(at 10% 20%, rgba(244,178,46,0.08) 0%, transparent 50%), radial-gradient(at 90% 80%, rgba(30,42,90,0.08) 0%, transparent 50%)',
+                'gradient-glass': 'linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%)',
             },
 
             animation: {

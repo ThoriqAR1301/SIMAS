@@ -437,6 +437,41 @@
         @apply bg-gradient-premium text-white shadow-lift
                ring-1 ring-white/10;
     }
+
+    .data-list {
+        @apply w-full text-sm border-separate border-spacing-y-2;
+    }
+    .data-list thead th {
+        @apply px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-ink-400;
+    }
+    .data-list tbody tr {
+        @apply bg-white dark:bg-brand-900/60 transition-all duration-300
+               hover:-translate-y-1 hover:shadow-lift
+               border border-transparent hover:border-gold-200 dark:hover:border-gold-800/50;
+    }
+    .data-list tbody td {
+        @apply px-6 py-5 text-ink-700 dark:text-ink-200 border-y border-r border-transparent;
+    }
+    .data-list tbody td:first-child {
+        @apply border-l rounded-l-2xl;
+    }
+    .data-list tbody td:last-child {
+        @apply rounded-r-2xl;
+    }
+
+    .sidebar-floating {
+        @apply fixed lg:relative top-4 bottom-4 left-4 z-40
+               w-72 rounded-3xl overflow-hidden
+               bg-gradient-premium shadow-2xl
+               border border-white/10 flex flex-col;
+    }
+
+    .topbar-glass {
+        @apply sticky top-0 z-30 mx-4 mt-4 rounded-2xl
+               bg-white/70 dark:bg-brand-950/70 backdrop-blur-xl
+               border border-white/20 dark:border-brand-800/50
+               shadow-glass;
+    }
 }
 
 @layer utilities {

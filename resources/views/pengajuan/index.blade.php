@@ -1,6 +1,6 @@
 <x-app-layout>
-    @section('page-title', 'Pengajuan Surat')
-    @section('page-subtitle', 'Kelola Semua Pengajuan Surat Anda')
+    <x-slot name="title">Pengajuan Surat</x-slot>
+    <x-slot name="subtitle">Kelola Semua Pengajuan Surat Anda</x-slot>
 
     <div class="space-y-5">
 
@@ -21,19 +21,20 @@
             @endcan
         </div>
 
-        <form method="GET" class="card p-5">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="md:col-span-2">
+        <form method="GET" class="card p-5 lg:p-6 overflow-hidden">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+
+                <div class="md:col-span-5 min-w-0">
                     <label class="label">Cari</label>
                     <div class="relative">
-                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
                         <input type="text" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Nomor, Kegiatan, Atau Jenis Surat..." class="input pl-11">
                     </div>
                 </div>
 
-                <div>
+                <div class="md:col-span-3 min-w-0">
                     <label class="label">Status</label>
                     <select name="status" class="input">
                         <option value="">Semua Status</option>
@@ -45,19 +46,25 @@
                     </select>
                 </div>
 
-                <div>
+                <div class="md:col-span-4 min-w-0">
                     <label class="label">Rentang Tanggal</label>
-                    <div class="flex gap-2">
-                        <input type="date" name="dari" value="{{ $filters['dari'] ?? '' }}" class="input">
-                        <input type="date" name="sampai" value="{{ $filters['sampai'] ?? '' }}" class="input">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <input type="date" name="dari" value="{{ $filters['dari'] ?? '' }}" class="input flex-1 min-w-0">
+                        <span class="text-ink-400 text-xs flex-shrink-0">—</span>
+                        <input type="date" name="sampai" value="{{ $filters['sampai'] ?? '' }}" class="input flex-1 min-w-0">
                     </div>
                 </div>
             </div>
 
-            <div class="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-ink-100 dark:border-brand-800">
-                <a href="{{ route('pengajuan.index') }}" class="btn-ghost btn-sm">Reset</a>
-                <button type="submit" class="btn-primary btn-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex items-center justify-end gap-2 mt-5 pt-5 border-t border-canvas-200 dark:border-brand-800">
+                <a href="{{ route('pengajuan.index') }}" class="btn-ghost btn-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Reset
+                </a>
+                <button type="submit" class="btn-primary btn-sm btn-shine">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
                     </svg>
                     Terapkan

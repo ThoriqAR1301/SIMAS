@@ -113,6 +113,25 @@ it('Guru Tidak Bisa Akses Pengajuan Guru Lain (IDOR Protection)', function () {
         ->assertForbidden();
 });
 
+it('Guru Dapat Membuka Detail Pengajuan Dengan Lampiran', function () {
+    $data = createFullApprovalFlowTestData();
+    $pengajuan = PengajuanSurat::factory()->create([
+        'user_id' => $data['guru']->id,
+        'blanko_id' => $data['blanko']->id,
+    ]);
+    $pengajuan->lampiran()->create([
+        'nama_file' => 'surat-pendukung.pdf',
+        'path' => 'lampiran/pengajuan/surat-pendukung.pdf',
+        'mime_type' => 'application/pdf',
+        'ukuran' => 1024,
+    ]);
+
+    $this->actingAs($data['guru'])
+        ->get(route('pengajuan.show', $pengajuan))
+        ->assertOk()
+        ->assertSee('surat-pendukung.pdf');
+});
+
 it('Guru Tidak Bisa Submit Pengajuan Orang Lain', function () {
     $data = createFullApprovalFlowTestData();
     $guruB = User::factory()->create(['role_id' => Role::where('name', 'guru')->value('id')]);

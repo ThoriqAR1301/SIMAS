@@ -40,6 +40,21 @@ function createApprovalTestData(): array
     return compact('guru', 'admin', 'pimpinan', 'pengajuan');
 }
 
+it('renders the approval queue for an authorized admin', function () {
+    $data = createApprovalTestData();
+
+    expect(PengajuanSurat::query()
+        ->menungguApproval(1)
+        ->whereKey($data['pengajuan']->id)
+        ->exists())->toBeTrue();
+
+    $response = $this->actingAs($data['admin'])
+        ->get(route('approval.index'));
+
+    $response->assertOk()
+        ->assertViewHas('pengajuan', fn ($pengajuan) => $pengajuan->contains('id', $data['pengajuan']->id));
+});
+
 it('Admin Bisa Verifikasi Pengajuan → Lanjut ke Pimpinan', function () {
     $data = createApprovalTestData();
     $admin = $data['admin'];

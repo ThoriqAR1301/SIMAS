@@ -14,82 +14,101 @@
     x-init="init()"
     class="relative">
 
-    <button
-        @click="toggle()"
-        class="relative p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <button @click="toggle()" :class="open ? 'bg-gold-100 dark:bg-gold-900/30 text-gold-700 dark:text-gold-400' : 'text-ink-500 hover:text-brand-700 dark:text-ink-400 dark:hover:text-gold-400 hover:bg-ink-100 dark:hover:bg-brand-900'" class="relative p-2.5 rounded-xl transition-all duration-200">
+
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
         </svg>
 
-        <span
-            x-show="unreadCount > 0"
-            x-text="unreadCount > 99 ? '99+' : unreadCount"
-            x-cloak
-            class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse">
-        </span>
+        <template x-if="unreadCount > 0">
+            <span class="absolute top-1 right-1 min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-gradient-gold text-brand-900 text-[10px] font-black rounded-full ring-2 ring-white dark:ring-brand-950 shadow-glow-gold">
+                <span x-text="unreadCount > 99 ? '99+' : unreadCount"></span>
+                <span class="absolute inset-0 rounded-full bg-gold-400 animate-ping opacity-30"></span>
+            </span>
+        </template>
     </button>
 
-    <div
-        x-show="open"
-        x-cloak
-        @click.outside="open = false"
-        x-transition:enter="transition ease-out duration-200"
-        x-transition:enter-start="opacity-0 scale-95"
-        x-transition:enter-end="opacity-100 scale-100"
-        class="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50">
+    <div x-show="open" x-cloak @click.outside="open = false" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95 translate-y-2" x-transition:enter-end="opacity-100 scale-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="absolute right-0 mt-3 w-[420px] max-w-[calc(100vw-2rem)] bg-white dark:bg-brand-900 rounded-3xl shadow-2xl overflow-hidden ring-1 ring-brand-900/5 dark:ring-white/5 z-50">
 
-        <div class="flex items-center justify-between px-4 py-3 border-b dark:border-gray-700">
-            <h3 class="font-semibold text-gray-900 dark:text-gray-100">
-                Notifikasi
-                <span x-show="unreadCount > 0" x-text="'(' + unreadCount + ')'" class="text-xs text-red-500"></span>
-            </h3>
-            <button
-                x-show="notifications.length > 0"
-                @click="markAllRead()"
-                class="text-xs text-blue-600 hover:underline">
-                Tandai Semua Dibaca
-            </button>
+        <div class="relative overflow-hidden bg-gradient-premium noise">
+            <div class="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-gold-400/20 blur-2xl"></div>
+            <div class="relative p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="glow-dot"></span>
+                            <p class="text-[10px] font-bold uppercase tracking-widest text-gold-400">
+                                Notifikasi
+                            </p>
+                        </div>
+                        <h3 class="text-lg font-bold text-white tracking-tight">
+                            <span x-text="unreadCount > 0 ? unreadCount + ' Belum Dibaca' : 'Semua Sudah Dibaca'"></span>
+                        </h3>
+                    </div>
+                    <button x-show="notifications.some(n => !n.read_at)" @click="markAllRead()" class="text-[10px] font-bold uppercase tracking-widest text-gold-400 hover:text-gold-300 transition px-3 py-1.5 rounded-lg hover:bg-white/5">
+                        Tandai Semua
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-1 p-1 rounded-2xl bg-black/20 backdrop-blur">
+                    <template x-for="tab in tabs" :key="tab.key">
+                        <button @click="activeTab = tab.key" :class="activeTab === tab.key ? 'bg-white text-brand-900 shadow-sm' : 'text-ink-300 hover:text-white'" class="flex-1 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200" x-text="tab.label"></button>
+                    </template>
+                </div>
+            </div>
         </div>
 
-        <div class="max-h-96 overflow-y-auto">
-            <template x-if="notifications.length === 0">
-                <div class="px-4 py-12 text-center text-sm text-gray-400">
-                    <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-                    </svg>
-                    Belum Ada Notifikasi
+        <div class="max-h-[420px] overflow-y-auto">
+
+            <template x-if="filtered().length === 0">
+                <div class="px-6 py-16 text-center">
+                    <div class="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-gold-100 to-gold-50 dark:from-brand-800 dark:to-brand-900 flex items-center justify-center mb-4 shadow-card">
+                        <svg class="w-10 h-10 text-gold-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                    </div>
+                    <h4 class="font-bold text-brand-900 dark:text-ink-50 mb-1" x-text="activeTab === 'all' ? 'Belum Ada Notifikasi' : 'Tidak Ada Di Kategori Ini'"></h4>
+                    <p class="text-xs text-ink-500 max-w-[240px] mx-auto">
+                        Notifikasi Akan Muncul Di Sini Saat Ada Aktivitas Baru
+                    </p>
                 </div>
             </template>
 
-            <template x-for="notif in notifications" :key="notif.id">
-                <a :href="notif.url" @click="markRead(notif.id)" class="flex items-start gap-3 px-4 py-3 border-b dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer" :class="!notif.read_at ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''">
+            <template x-for="(notif, idx) in filtered()" :key="notif.id">
+                <a :href="notif.url" @click="markRead(notif.id)" class="relative flex items-start gap-4 px-5 py-4 border-b border-ink-100 dark:border-brand-800/60 transition-all duration-200 group" :class="!notif.read_at ? 'bg-gradient-to-r from-gold-50/50 to-transparent dark:from-gold-900/10' : 'hover:bg-ink-50 dark:hover:bg-brand-900/40'" :style="`animation-delay: ${idx * 30}ms`" x-init="$el.style.animation = 'slideUp 0.4s ease-out both'">
 
-                    <div class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center" :class="iconBg(notif)">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span x-show="!notif.read_at" class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-gold-400 to-gold-600 rounded-r"></span>
+
+                    <div class="flex-shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center shadow-sm ring-1 ring-black/5 dark:ring-white/5 group-hover:scale-105 transition-transform" :class="iconBg(notif)">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
                     </div>
 
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate"
-                           x-text="notif.judul"></p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2"
-                           x-text="notif.pesan"></p>
-                        <p class="text-[10px] text-gray-400 mt-1"
-                           x-text="notif.waktu"></p>
+                        <div class="flex items-center gap-2 mb-1">
+                            <p class="text-sm font-bold text-brand-900 dark:text-ink-50 truncate" x-text="notif.judul"></p>
+                            <span x-show="!notif.read_at" class="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-gold-400 text-brand-900">
+                                BARU
+                            </span>
+                        </div>
+                        <p class="text-xs text-ink-500 dark:text-ink-400 line-clamp-2 leading-relaxed" x-text="notif.pesan"></p>
+                        <p class="text-[10px] text-ink-400 mt-1.5 font-medium" x-text="notif.waktu"></p>
                     </div>
 
-                    <span
-                        x-show="!notif.read_at"
-                        class="flex-shrink-0 w-2 h-2 rounded-full bg-blue-500 mt-2">
-                    </span>
+                    <svg class="w-4 h-4 text-ink-300 group-hover:text-gold-500 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
                 </a>
             </template>
         </div>
 
-        <div class="px-4 py-2 border-t dark:border-gray-700 text-center">
-            <a :href="indexUrl" class="text-xs text-blue-600 hover:underline">
+        <div class="px-5 py-3 border-t border-ink-100 dark:border-brand-800 bg-gradient-to-r from-ink-50 to-white dark:from-brand-900/60 dark:to-brand-900">
+            <a :href="indexUrl" class="flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-600 hover:text-brand-800 dark:text-gold-400 dark:hover:text-gold-300 transition group">
                 Lihat Semua Notifikasi
+                <svg class="w-3.5 h-3.5 group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                </svg>
             </a>
         </div>
     </div>
@@ -102,15 +121,18 @@ function notificationBell(config) {
         open: false,
         unreadCount: 0,
         notifications: [],
+        activeTab: 'all',
+        tabs: [
+            { key: 'all', label: 'Semua' },
+            { key: 'unread', label: 'Belum' },
+        ],
 
         init() {
             this.fetchUnreadCount();
 
             if (window.Echo) {
                 window.Echo.private(`role.${config.role}`)
-                    .listen('.pengajuan.status.changed', (data) => {
-                        this.onRealtimeNotif(data);
-                    });
+                    .listen('.pengajuan.status.changed', (data) => this.onRealtimeNotif(data));
             }
 
             setInterval(() => this.fetchUnreadCount(), 30000);
@@ -121,51 +143,43 @@ function notificationBell(config) {
             if (this.open) this.fetchNotifications();
         },
 
+        filtered() {
+            if (this.activeTab === 'unread') return this.notifications.filter(n => !n.read_at);
+            return this.notifications;
+        },
+
         async fetchUnreadCount() {
             try {
-                const res = await fetch(config.unreadUrl, {
-                    headers: { 'Accept': 'application/json' }
-                });
+                const res = await fetch(config.unreadUrl, { headers: { 'Accept': 'application/json' }});
+
                 if (!res.ok) {
-                    throw new Error(`Request failed with status ${res.status}`);
+                    throw new Error(`Unread count request failed with status ${res.status}`);
                 }
 
                 const data = await res.json();
                 this.unreadCount = data.count ?? 0;
-            } catch (e) {
-                console.warn('Gagal Fetch Unread Count :', e);
+            } catch (error) {
+                console.error('Unable to fetch unread notification count.', error);
             }
         },
 
         async fetchNotifications() {
             try {
-                const res = await fetch(config.indexUrl, {
-                    headers: { 'Accept': 'application/json' }
-                });
+                const res = await fetch(config.indexUrl, { headers: { 'Accept': 'application/json' }});
+
                 if (!res.ok) {
-                    throw new Error(`Request failed with status ${res.status}`);
+                    throw new Error(`Notifications request failed with status ${res.status}`);
                 }
 
                 const data = await res.json();
                 this.notifications = data.data ?? [];
-            } catch (e) {
-                console.warn('Gagal Fetch Notifications :', e);
+            } catch (error) {
+                console.error('Unable to fetch notifications.', error);
             }
         },
 
         async markRead(id) {
-            const notif = this.notifications.find(n => n.id === id);
-            if (!notif) return;
-
-            if (notif.ephemeral) {
-                if (!notif.read_at) {
-                    notif.read_at = new Date().toISOString();
-                    this.unreadCount = Math.max(0, this.unreadCount - 1);
-                }
-
-                return;
-            }
-
+            
             try {
                 const res = await fetch(config.markReadUrl.replace('__notification_id__', encodeURIComponent(id)), {
                     method: 'POST',
@@ -174,16 +188,18 @@ function notificationBell(config) {
                         'Accept': 'application/json',
                     }
                 });
+
                 if (!res.ok) {
-                    throw new Error(`Request failed with status ${res.status}`);
+                    throw new Error(`Mark notification as read failed with status ${res.status}`);
                 }
 
-                if (notif && !notif.read_at) {
-                    notif.read_at = new Date().toISOString();
+                const n = this.notifications.find(n => n.id === id);
+                if (n && !n.read_at) {
+                    n.read_at = new Date().toISOString();
                     this.unreadCount = Math.max(0, this.unreadCount - 1);
                 }
-            } catch (e) {
-                console.warn('Gagal Mark Read :', e);
+            } catch (error) {
+                console.error('Unable to mark notification as read.', error);
             }
         },
 
@@ -196,14 +212,15 @@ function notificationBell(config) {
                         'Accept': 'application/json',
                     }
                 });
+
                 if (!res.ok) {
-                    throw new Error(`Request failed with status ${res.status}`);
+                    throw new Error(`Mark all notifications as read failed with status ${res.status}`);
                 }
 
                 this.notifications.forEach(n => n.read_at = new Date().toISOString());
                 this.unreadCount = 0;
-            } catch (e) {
-                console.warn('Gagal Mark All Read :', e);
+            } catch (error) {
+                console.error('Unable to mark all notifications as read.', error);
             }
         },
 
@@ -212,60 +229,75 @@ function notificationBell(config) {
 
             if (this.open) {
                 this.notifications.unshift({
-                    id: 'realtime-' + Date.now(),
+                    id: 'rt-' + Date.now(),
                     judul: this.judulFromAksi(data.aksi),
                     pesan: `${data.pengaju} — ${data.nama_kegiatan}`,
                     url: data.url,
                     waktu: data.waktu,
                     read_at: null,
                     aksi: data.aksi,
-                    ephemeral: true,
+
                 });
             }
-
-            this.showToast(this.judulFromAksi(data.aksi), data.nama_kegiatan);
-
+            this.showToast(this.judulFromAksi(data.aksi), data.nama_kegiatan, data.aksi);
         },
 
         judulFromAksi(aksi) {
             return {
-                'submitted': 'Pengajuan Baru',
+                'submitted': 'Pengajuan Baru Masuk',
                 'verified': 'Pengajuan Diverifikasi',
                 'approved': 'Pengajuan Disetujui',
                 'rejected': 'Pengajuan Ditolak',
-                'revisi': 'Diminta Revisi',
+                'revisi': 'Permintaan Revisi',
             }[aksi] ?? 'Notifikasi Baru';
         },
 
         iconBg(notif) {
             const aksi = notif.aksi ?? 'submitted';
             return {
-                'submitted': 'bg-blue-100 text-blue-600',
-                'verified': 'bg-yellow-100 text-yellow-600',
-                'approved': 'bg-green-100 text-green-600',
-                'rejected': 'bg-red-100 text-red-600',
-                'revisi': 'bg-orange-100 text-orange-600',
-            }[aksi] ?? 'bg-gray-100 text-gray-600';
+                'submitted': 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400',
+                'verified': 'bg-gold-100 text-gold-700 dark:bg-gold-900/40 dark:text-gold-400',
+                'approved': 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400',
+                'rejected': 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400',
+                'revisi': 'bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400',
+            }[aksi] ?? 'bg-ink-100 text-ink-600';
         },
 
-        showToast(title, message) {
+        showToast(title, message, aksi) {
+            const colors = {
+                'submitted': 'border-blue-500',
+                'verified': 'border-gold-500',
+                'approved': 'border-emerald-500',
+                'rejected': 'border-red-500',
+                'revisi': 'border-orange-500',
+            };
+            const borderColor = colors[aksi] ?? 'border-brand-500';
+
             const toast = document.createElement('div');
-            toast.className = 'fixed bottom-4 right-4 bg-white dark:bg-gray-800 border-l-4 border-blue-500 shadow-xl rounded-lg p-4 max-w-sm z-[9999] animate-slide-in';
+            toast.className = `fixed bottom-6 right-6 bg-white dark:bg-brand-900 border-l-4 ${borderColor} shadow-2xl rounded-2xl p-4 max-w-sm z-[9999] animate-slide-in ring-1 ring-black/5`;
             toast.innerHTML = `
                 <div class="flex items-start gap-3">
-                    <svg class="w-5 h-5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z"/>
-                    </svg>
-                    <div class="flex-1">
-                        <p data-notification-title class="font-medium text-sm text-gray-900 dark:text-gray-100"></p>
-                        <p data-notification-message class="text-xs text-gray-500 mt-0.5"></p>
+                    <div class="w-9 h-9 rounded-xl bg-gradient-gold flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4 text-brand-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p data-toast-title class="font-bold text-sm text-brand-900 dark:text-ink-50"></p>
+                        <p data-toast-message class="text-xs text-ink-500 mt-0.5 line-clamp-2"></p>
                     </div>
                 </div>
             `;
-            toast.querySelector('[data-notification-title]').textContent = title;
-            toast.querySelector('[data-notification-message]').textContent = message;
+
+            toast.querySelector('[data-toast-title]').textContent = title;
+            toast.querySelector('[data-toast-message]').textContent = message;
             document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 5000);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
         },
     };
 }

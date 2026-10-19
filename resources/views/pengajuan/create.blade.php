@@ -1,28 +1,37 @@
 <x-app-layout>
-    @section('page-title', 'Buat Pengajuan Surat')
-    @section('page-subtitle', 'Isi Formulir Dalam 3 Langkah Mudah')
+    <x-slot name="title">Buat Pengajuan Surat</x-slot>
+    <x-slot name="subtitle">Isi Formulir Dalam 3 Langkah Mudah</x-slot>
 
     <div class="max-w-3xl mx-auto" x-data="pengajuanWizard()">
-        <div class="card p-6 mb-5">
-            <div class="flex items-center">
-                <template x-for="(s, i) in steps" :key="i">
-                    <div class="flex items-center flex-1">
-                        <div class="flex flex-col items-center flex-shrink-0">
-                            <div class="w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-sm transition-all duration-300" :class="step > i ? 'bg-gradient-brand text-white shadow-lift' : step === i ? 'bg-gradient-gold text-brand-900 shadow-glow-gold scale-110' : 'bg-ink-100 dark:bg-brand-900 text-ink-400 dark:text-ink-500'">
+        <div class="card p-6 lg:p-8 mb-5 overflow-hidden">
+            <div class="relative">
+
+                <div class="absolute h-1 rounded-full bg-canvas-300 dark:bg-brand-800" :style="`top: 20px; left: calc(${100 / steps.length / 2}%); right: calc(${100 / steps.length / 2}%)`"></div>
+
+                <div class="absolute h-1 rounded-full bg-gradient-gold transition-all duration-500 ease-out shadow-[0_0_12px_rgba(244,178,46,0.4)]" :style="`top: 20px; left: calc(${100 / steps.length / 2}%); width: calc(${step * 100 / steps.length}%)`"></div>
+
+                <div class="relative grid" :style="`grid-template-columns: repeat(${steps.length}, minmax(0, 1fr))`">
+
+                    <template x-for="(s, i) in steps" :key="i">
+                        <div class="flex flex-col items-center gap-2">
+
+                            <div class="relative z-10 w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-sm transition-all duration-300" :class="step > i ? 'bg-gradient-brand text-white shadow-lift' : step === i ? 'bg-gradient-gold text-brand-900 shadow-glow-gold scale-110 ring-4 ring-gold-100 dark:ring-gold-900/30' : 'bg-canvas-200 dark:bg-brand-900 text-ink-400 dark:text-ink-500 ring-1 ring-canvas-300 dark:ring-brand-800'">
+
                                 <template x-if="step > i">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
                                     </svg>
                                 </template>
+
                                 <template x-if="step <= i">
                                     <span x-text="i + 1"></span>
                                 </template>
                             </div>
-                            <span class="mt-2 text-[10px] font-bold uppercase tracking-wider text-center whitespace-nowrap" :class="step >= i ? 'text-brand-700 dark:text-gold-400' : 'text-ink-400'" x-text="s.title"></span>
+
+                            <span class="text-[10px] font-black uppercase tracking-[0.1em] text-center whitespace-nowrap transition-colors duration-300" :class="step >= i ? 'text-brand-700 dark:text-gold-400' : 'text-ink-400 dark:text-ink-500'" x-text="s.title"></span>
                         </div>
-                        <div x-show="i < steps.length - 1" class="flex-1 h-1 mx-3 rounded-full transition-all duration-500" :class="step > i ? 'bg-gradient-gold' : 'bg-ink-200 dark:bg-brand-800'"></div>
-                    </div>
-                </template>
+                    </template>
+                </div>
             </div>
         </div>
 
@@ -103,7 +112,7 @@
 
                 <div class="space-y-5">
                     <div x-data="{ files: [] }">
-                        <label class="label">Lampiran (opsional)</label>
+                        <label class="label">Lampiran (Opsional)</label>
                         <div class="border-2 border-dashed border-ink-200 dark:border-brand-800 rounded-2xl p-6 text-center hover:border-gold-400 hover:bg-gold-50/30 dark:hover:bg-gold-900/10 transition cursor-pointer">
                             <input type="file" name="lampiran[]" multiple accept=".pdf,.jpg,.jpeg,.png" @change="files = Array.from($event.target.files)" class="hidden" id="file-input">
                             <label for="file-input" class="cursor-pointer block">

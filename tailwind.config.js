@@ -57,6 +57,14 @@ export default {
                     800: '#1F2738',
                     900: '#0E1421',
                 },
+                canvas: {
+                    50:  '#FEFCF8',
+                    100: '#FAF7F0',
+                    200: '#F3EDE0',
+                    300: '#E8DFC9',
+                    400: '#D4C9AE',
+                    500: '#B8A886',
+                },
             },
 
             boxShadow: {

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'role_id', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -28,5 +28,45 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    public function isGuru(): bool
+    {
+        return $this->role?->name === 'guru';
+    }
+
+    public function isAdminTu(): bool
+    {
+        return $this->role?->name === 'admin_tu';
+    }
+
+    public function isPimpinan(): bool
+    {
+        return $this->role?->name === 'pimpinan';
+    }
+
+    public function hasRole(string $role): bool
+    {
+        return $this->role?->name === $role;
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        return $this->role?->hasPermission($permission) ?? false;
+    }
+
+    public function scopeAktif($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeRole($query, string $roleName)
+    {
+        return $query->whereHas('role', fn ($q) => $q->where('name', $roleName));
     }
 }

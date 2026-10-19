@@ -12,7 +12,10 @@
 
     <div class="max-w-7xl mx-auto space-y-6" x-data="{ showReject: false, showRevisi: false, action: null }">
 
-        <div class="relative rounded-3xl overflow-hidden noise bg-gradient-premium shadow-lift ring-1 ring-white/5">
+        <div class="relative rounded-[2rem] overflow-hidden bg-brand-950 shadow-2xl ring-1 ring-white/10 group">
+            <div class="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==')]"></div>
+            <div class="absolute -top-40 -right-40 w-96 h-96 bg-gold-500/20 rounded-full blur-3xl group-hover:bg-gold-500/30 transition-all duration-700"></div>
+            <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-brand-500/20 rounded-full blur-3xl"></div>
 
             <div class="absolute -top-24 -right-16 w-80 h-80 rounded-full bg-gold-400/15 blur-3xl"></div>
             <div class="absolute -bottom-24 -left-16 w-72 h-72 rounded-full bg-brand-400/10 blur-3xl"></div>
@@ -94,7 +97,7 @@
 
             <div class="lg:col-span-2 space-y-6">
 
-                <div class="paper corner-accent rounded-3xl p-6 lg:p-8">
+                <div class="paper corner-accent rounded-3xl p-6 lg:p-8 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.02)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)]">
                     <div class="flex items-center justify-between mb-6">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 flex items-center justify-center">

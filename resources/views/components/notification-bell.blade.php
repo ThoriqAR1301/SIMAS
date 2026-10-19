@@ -28,7 +28,7 @@
         </template>
     </button>
 
-    <div x-show="open" x-cloak @click.outside="open = false" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95 translate-y-2" x-transition:enter-end="opacity-100 scale-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="absolute right-0 mt-3 w-[420px] max-w-[calc(100vw-2rem)] bg-white dark:bg-brand-900 rounded-3xl shadow-2xl overflow-hidden ring-1 ring-brand-900/5 dark:ring-white/5 z-50">
+    <div x-show="open" x-cloak @click.outside="open = false" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95 translate-y-2" x-transition:enter-end="opacity-100 scale-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="absolute right-0 mt-3 w-[420px] max-w-[calc(100vw-2rem)] bg-white/90 dark:bg-brand-950/90 backdrop-blur-2xl rounded-3xl shadow-[0_20px_70px_-10px_rgba(30,42,90,0.3)] border border-white/20 dark:border-brand-800 overflow-hidden z-50">
 
         <div class="relative overflow-hidden bg-gradient-premium noise">
             <div class="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-gold-400/20 blur-2xl"></div>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\SuratPerizinanSakitController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\PengajuanSuratController;
@@ -11,6 +12,20 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/surat-perizinan-sakit/create', [SuratPerizinanSakitController::class, 'create'])
+    ->name('surat-perizinan-sakit.create');
+
+Route::get('/surat-perizinan-sakit', [SuratPerizinanSakitController::class, 'index'])
+    ->middleware('auth')
+    ->name('surat-perizinan-sakit.index');
+
+Route::post('/surat-perizinan-sakit', [SuratPerizinanSakitController::class, 'store'])
+    ->middleware('auth')
+    ->name('surat-perizinan-sakit.store');
+
+Route::get('/surat-perizinan-sakit/{suratPerizinanSakit}', [SuratPerizinanSakitController::class, 'show'])
+    ->middleware('auth')
+    ->name('surat-perizinan-sakit.show');
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');

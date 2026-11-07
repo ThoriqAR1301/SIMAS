@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Http\Controllers\SuratPerizinanSakitController;
@@ -74,7 +75,6 @@ Route::get(
     ->name('surat-perizinan-sakit.dokter');
 
 // Detail pengajuan.
-// Letakkan setelah route khusus agar tidak mengganggu route lainnya.
 Route::get(
     '/surat-perizinan-sakit/{suratPerizinanSakit}',
     [SuratPerizinanSakitController::class, 'show']

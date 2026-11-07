@@ -9,11 +9,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['tanggal_mulai', 'tanggal_selesai', 'alasan'])]
 class SuratPerizinanSakit extends Model
 {
+    protected $table = 'surat_perizinan_sakit';
+
     public const STATUS_MENUNGGU = 'menunggu';
 
     public const STATUS_DISETUJUI = 'disetujui';
 
     public const STATUS_DITOLAK = 'ditolak';
+
+    public const STATUS_PERLU_REVISI = 'perlu_revisi';
 
     /**
      * @return list<string>
@@ -24,6 +28,7 @@ class SuratPerizinanSakit extends Model
             self::STATUS_MENUNGGU,
             self::STATUS_DISETUJUI,
             self::STATUS_DITOLAK,
+            self::STATUS_PERLU_REVISI,
         ];
     }
 

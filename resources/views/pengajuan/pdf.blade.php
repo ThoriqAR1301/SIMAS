@@ -2,423 +2,336 @@
 <html lang="id">
 <head>
     <meta charset="utf-8">
-    <title>Surat {{ $pengajuan->nomor_surat }}</title>
+    <title>Surat Tugas {{ $pengajuan->nomor_surat }}</title>
     <style>
         @page {
-            size: A4;
-            margin: 15mm 18mm 20mm 18mm;
+            size: A4 portrait;
+            margin: 15mm 20mm 20mm;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+        }
 
         body {
-            font-family: 'Times New Roman', Georgia, serif;
+            font-family: "Times New Roman", Times, serif;
             font-size: 11.5pt;
-            line-height: 1.55;
-            color: #1E2A5A;
-            position: relative;
+            line-height: 1.6;
+            color: #000000;
+            background-color: #FFFFFF;
         }
 
-        .side-accent {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 6mm;
-            height: 100%;
-            background: linear-gradient(180deg,
-                #F4B22E 0%, #F4B22E 40%,
-                #1E2A5A 40%, #1E2A5A 100%);
-        }
-
-        .watermark {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-30deg);
-            font-size: 120pt;
-            font-weight: 900;
-            color: #1E2A5A;
-            opacity: 0.03;
-            letter-spacing: 0.1em;
-            z-index: -1;
-        }
-
-        .header {
-            padding-bottom: 12px;
-            border-bottom: 4px double #1E2A5A;
-            margin-bottom: 24px;
-            position: relative;
-        }
-
-        .header-inner {
-            display: table;
+        /* =========================================
+           KOP SURAT (Standard Premium)
+           ========================================= */
+        .letterhead {
             width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            border-bottom: 3px solid #000;
+            padding-bottom: 10px;
+        }
+
+        .letterhead td {
+            vertical-align: middle;
         }
 
         .logo-cell {
-            display: table-cell;
-            width: 22mm;
-            vertical-align: middle;
-            padding-right: 6mm;
+            width: 90px;
+            text-align: center;
         }
 
         .logo-cell img {
-            width: 20mm;
-            height: 20mm;
+            width: 75px;
+            height: 75px;
             object-fit: contain;
         }
 
-        .text-cell {
-            display: table-cell;
-            vertical-align: middle;
+        .school-info {
             text-align: center;
         }
 
-        .kop-1 {
-            font-size: 11pt;
-            letter-spacing: 0.05em;
-            color: #1E2A5A;
-            font-weight: 600;
+        .school-info .foundation {
+            font-family: Arial, sans-serif;
+            font-size: 9.5pt;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
         }
 
-        .kop-2 {
-            font-size: 15pt;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            color: #1E2A5A;
-            margin: 2px 0;
+        .school-info .name {
+            font-family: Arial, sans-serif;
+            font-size: 18pt;
+            font-weight: 900;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
         }
 
-        .kop-3 {
-            font-size: 9pt;
-            color: #4A579F;
-            letter-spacing: 0.02em;
-        }
-
-        .kop-address {
+        .school-info .address {
+            font-family: Arial, sans-serif;
             font-size: 8.5pt;
-            color: #5C6B85;
-            margin-top: 3px;
-            font-style: italic;
+            margin-bottom: 2px;
         }
 
-        .title-block {
+        /* =========================================
+           TITLE & NOMOR
+           ========================================= */
+        .title-section {
             text-align: center;
-            margin: 22px 0 8px;
+            margin-bottom: 25px;
         }
 
-        .title-main {
-            font-size: 14pt;
-            font-weight: 800;
-            letter-spacing: 0.15em;
+        .title-section h1 {
+            font-size: 16pt;
+            font-weight: bold;
             text-decoration: underline;
-            text-underline-offset: 4px;
-            color: #1E2A5A;
+            letter-spacing: 1px;
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
         }
 
-        .title-nomor {
-            font-size: 11pt;
-            margin-top: 4px;
-            color: #2B3567;
-            font-family: 'JetBrains Mono', 'Courier New', monospace;
-            letter-spacing: 0.05em;
+        .title-section .nomor {
+            font-size: 11.5pt;
+            margin: 0;
         }
 
-        .body-content {
-            margin-top: 20px;
+        /* =========================================
+           CONTENT
+           ========================================= */
+        .opening {
+            margin-bottom: 15px;
             text-align: justify;
         }
 
-        .body-content p {
-            margin-bottom: 10px;
-        }
-
-        .info-table {
-            margin: 16px 0 16px 24px;
-            width: calc(100% - 24px);
-            border-collapse: collapse;
-        }
-
-        .info-table tr { vertical-align: top; }
-
-        .info-table td {
-            padding: 4px 0;
-            font-size: 11pt;
-        }
-
-        .info-table td:first-child {
-            width: 45mm;
-            color: #5C6B85;
-        }
-
-        .info-table td:nth-child(2) {
-            width: 5mm;
-            color: #1E2A5A;
-        }
-
-        .info-table td:last-child {
-            font-weight: 600;
-            color: #1E2A5A;
-        }
-
-        .highlight-box {
-            margin: 18px 0;
-            padding: 12px 16px;
-            background: linear-gradient(135deg, #FEF9EC 0%, #FDF0C8 100%);
-            border-left: 4px solid #F4B22E;
-            border-radius: 2px;
-        }
-
-        .highlight-box strong {
-            color: #1E2A5A;
-            font-size: 11.5pt;
-        }
-
-        .signature-block {
-            margin-top: 40px;
+        /* Tabel Panitia (Persis PDF Referensi) */
+        .table-panitia {
             width: 100%;
-            display: table;
+            border-collapse: collapse;
+            margin-bottom: 20px;
         }
 
-        .signature-left {
-            display: table-cell;
-            width: 55%;
+        .table-panitia th, 
+        .table-panitia td {
+            border: 1px solid #000000;
+            padding: 6px 10px;
             vertical-align: top;
-            font-size: 10pt;
-            color: #5C6B85;
         }
 
-        .signature-right {
-            display: table-cell;
-            width: 45%;
-            vertical-align: top;
+        .table-panitia th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #F3F4F6; /* Sentuhan premium: header abu-abu sangat muda */
+        }
+
+        .table-panitia .col-no {
+            width: 7%;
             text-align: center;
         }
 
-        .signature-date {
-            font-size: 11pt;
-            color: #1E2A5A;
-            margin-bottom: 4px;
+        .table-panitia .col-nama {
+            width: 40%;
         }
 
-        .signature-role {
-            font-size: 11pt;
-            color: #1E2A5A;
-            margin-bottom: 50px;
+        .table-panitia .col-ket {
+            width: 53%;
         }
 
-        .signature-name {
-            font-size: 11.5pt;
-            font-weight: 800;
-            color: #1E2A5A;
+        /* Rincian Kegiatan (Format Paragraf Rata Kiri) */
+        .activity-info {
+            margin-bottom: 20px;
+        }
+
+        .activity-info table {
+            border-collapse: collapse;
+            margin-left: 10px;
+        }
+
+        .activity-info td {
+            padding: 2px 5px;
+            vertical-align: top;
+        }
+
+        .activity-info td:first-child {
+            width: 80px;
+        }
+
+        .activity-info td:nth-child(2) {
+            width: 10px;
+        }
+
+        /* =========================================
+           CLOSING & SIGNATURE
+           ========================================= */
+        .closing {
+            margin-bottom: 30px;
+            text-align: justify;
+        }
+
+        .signature-section {
+            width: 100%;
+            border-collapse: collapse;
+            page-break-inside: avoid;
+        }
+
+        .signature-section td {
+            width: 50%;
+            vertical-align: top;
+        }
+
+        .signature-box {
+            text-align: center;
+            padding-right: 20px;
+        }
+
+        .signature-box .date {
+            margin-bottom: 5px;
+        }
+
+        .signature-box .role {
+            margin-bottom: 70px;
+        }
+
+        .signature-box .name {
+            font-weight: bold;
             text-decoration: underline;
-            text-underline-offset: 3px;
         }
 
-        .signature-nip {
-            font-size: 10pt;
-            color: #5C6B85;
-            margin-top: 3px;
-        }
-
-        .qr-block {
-            position: fixed;
-            bottom: 12mm;
-            right: 18mm;
-            text-align: center;
-            width: 32mm;
-        }
-
-        .qr-frame {
-            display: inline-block;
-            padding: 3px;
-            background: linear-gradient(135deg, #F4B22E, #D99A1A);
-            border-radius: 6px;
-        }
-
-        .qr-frame img {
-            display: block;
-            width: 26mm;
-            height: 26mm;
-            background: white;
-            padding: 2px;
-            border-radius: 4px;
-        }
-
-        .qr-caption {
-            font-size: 6.5pt;
-            color: #5C6B85;
-            margin-top: 3px;
-            line-height: 1.3;
-            letter-spacing: 0.02em;
-        }
-
-        .qr-caption strong {
-            color: #1E2A5A;
-            display: block;
-            font-size: 7pt;
-            letter-spacing: 0.05em;
-        }
-
+        /* =========================================
+           FOOTER
+           ========================================= */
         .footer {
             position: fixed;
-            bottom: 6mm;
-            left: 18mm;
-            right: 18mm;
-            padding-top: 4px;
-            border-top: 1px solid #C2C9E5;
-            font-size: 7pt;
-            color: #808EA6;
-            display: table;
-            width: calc(100% - 36mm);
+            bottom: 0;
+            left: 0;
+            right: 0;
+            border-top: 1px solid #D1D5DB;
+            padding-top: 5px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            font-size: 8pt;
+            color: #6B7280;
         }
-
-        .footer-left { display: table-cell; }
-        .footer-right { display: table-cell; text-align: right; }
     </style>
 </head>
 <body>
 
-    <div class="side-accent"></div>
-
-    <div class="watermark">SMK PESAT IT XPRO</div>
-
-    <div class="header">
-        <div class="header-inner">
-            <div class="logo-cell">
+    {{-- KOP SURAT --}}
+    <table class="letterhead">
+        <tr>
+            <td class="logo-cell">
                 <img src="{{ public_path('images/IT_XPRO-removebg-preview-removebg-preview.png') }}" alt="Logo">
-            </div>
-            <div class="text-cell">
-                <div class="kop-1">YAYASAN PENDIDIKAN PESAT</div>
-                <div class="kop-2">SMK PESAT IT XPRO</div>
-                <div class="kop-3">IT EXPERT &amp; PROFESSIONAL</div>
-                <div class="kop-address">
-                    Jl. Poras No.07, RT.01/RW.04, Loji, Kec. Bogor Bar., Kota Bogor, Jawa Barat 16117 · Telp 0877-1117-7442 · https://smkpesat.sch.id
+            </td>
+            <td class="school-info">
+                <div class="foundation">YAYASAN PESAT BIRRUL WALIDAIN</div>
+                <div class="name">SMK INFORMATIKA PESAT</div>
+                <div class="address">
+                    Jalan Poras No. 7 Sindang Barang Loji, Kota Bogor · Telp. (0251) 8346223<br>
+                    Email: smkit.pesat@gmail.com · Website: www.smkpesat.sch.id
                 </div>
-            </div>
-        </div>
+            </td>
+        </tr>
+    </table>
+
+    {{-- TITLE --}}
+    <div class="title-section">
+        <h1>Surat Tugas</h1>
+        <p class="nomor">Nomor : {{ $pengajuan->nomor_surat }}</p>
     </div>
 
-    <div class="title-block">
-        <div class="title-main">{{ strtoupper($pengajuan->jenis_surat) }}</div>
-        <div class="title-nomor">Nomor: {{ $pengajuan->nomor_surat }}</div>
-    </div>
+    {{-- OPENING --}}
+    <p class="opening">
+        Kepala SMK Informatika Pesat Kota Bogor dengan ini menugaskan kepada :
+    </p>
 
-    <div class="body-content">
-
-        <p>Yang Bertanda Tangan Di Bawah Ini, Kepala SMK Pesat IT XPro, Dengan Ini Menerangkan Bahwa :</p>
-
-        <table class="info-table">
+    {{-- TABEL PANITIA (3 Kolom) --}}
+    <table class="table-panitia">
+        <thead>
             <tr>
-                <td>Nama</td>
+                <th class="col-no">NO</th>
+                <th class="col-nama">NAMA</th>
+                <th class="col-ket">KETERANGAN</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($pengajuan->panitia ?? [] as $index => $anggota)
+                @php
+                    $nama = is_array($anggota) ? ($anggota['nama'] ?? '—') : $anggota;
+                    $jabatan = is_array($anggota) ? ($anggota['jabatan'] ?? '—') : '—';
+                    $keterangan = is_array($anggota) ? ($anggota['keterangan'] ?? '—') : '—';
+                @endphp
+                <tr>
+                    <td class="col-no">{{ $index + 1 }}.</td>
+                    <td>
+                        {{ $nama }}
+                        @if($jabatan !== '—')
+                            <br><span style="font-size: 9pt; color: #555;">({{ $jabatan }})</span>
+                        @endif
+                    </td>
+                    <td>{{ $keterangan }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="3" style="text-align: center; font-style: italic;">Tidak ada data guru/panitia yang dicantumkan.</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    {{-- KEGIATAN --}}
+    <p class="opening" style="margin-bottom: 8px;">
+        Sebagai Panitia dalam Kegiatan <strong>{{ $pengajuan->nama_kegiatan }}</strong> yang akan dilaksanakan pada:
+    </p>
+
+    <div class="activity-info">
+        <table>
+            <tr>
+                <td>Hari</td>
                 <td>:</td>
-                <td>{{ $pengajuan->user->name }}</td>
+                <td>{{ $pengajuan->tanggal_pelaksanaan->locale('id')->translatedFormat('l') }}</td>
             </tr>
             <tr>
-                <td>NIP</td>
+                <td>Tanggal</td>
                 <td>:</td>
-                <td>{{ $pengajuan->user->nip ?? '—' }}</td>
+                <td>{{ $pengajuan->tanggal_pelaksanaan->locale('id')->translatedFormat('d F Y') }}</td>
             </tr>
             <tr>
-                <td>Jabatan</td>
+                <td>Waktu</td>
                 <td>:</td>
-                <td>{{ $pengajuan->user->jabatan ?? '—' }}</td>
+                <td>{{ $pengajuan->waktu_mulai ?? '07.00' }} WIB s.d {{ $pengajuan->waktu_selesai ?? 'Selesai' }}</td>
+            </tr>
+            <tr>
+                <td>Tempat</td>
+                <td>:</td>
+                <td>{{ $pengajuan->tempat ?: 'SMK Informatika Pesat' }}</td>
             </tr>
         </table>
-
-        <p>
-            Benar Yang Bersangkutan Mengajukan <strong>{{ $pengajuan->jenis_surat }}</strong>
-            Untuk Kegiatan Dengan Rincian Sebagai Berikut :
-        </p>
-
-        <div class="highlight-box">
-            <table class="info-table" style="margin: 0;">
-                <tr>
-                    <td style="width: 40mm; color: #764E13;">Nama Kegiatan</td>
-                    <td style="width: 5mm; color: #764E13;">:</td>
-                    <td style="color: #1E2A5A;">{{ $pengajuan->nama_kegiatan }}</td>
-                </tr>
-                <tr>
-                    <td style="color: #764E13;">Tanggal</td>
-                    <td style="color: #764E13;">:</td>
-                    <td style="color: #1E2A5A;">
-                        {{ $pengajuan->tanggal_pelaksanaan->translatedFormat('d F Y') }}
-                    </td>
-                </tr>
-                @if($pengajuan->waktu_mulai)
-                <tr>
-                    <td style="color: #764E13;">Waktu</td>
-                    <td style="color: #764E13;">:</td>
-                    <td style="color: #1E2A5A;">
-                        {{ $pengajuan->waktu_mulai }} — {{ $pengajuan->waktu_selesai }} WIB
-                    </td>
-                </tr>
-                @endif
-                <tr>
-                    <td style="color: #764E13;">Tempat</td>
-                    <td style="color: #764E13;">:</td>
-                    <td style="color: #1E2A5A;">{{ $pengajuan->tempat ?? '—' }}</td>
-                </tr>
-                @if($pengajuan->keterangan)
-                <tr>
-                    <td style="color: #764E13;">Keterangan</td>
-                    <td style="color: #764E13;">:</td>
-                    <td style="color: #1E2A5A;">{{ $pengajuan->keterangan }}</td>
-                </tr>
-                @endif
-            </table>
-        </div>
-
-        <p>
-            Demikian Surat {{ strtolower($pengajuan->jenis_surat) }} Ini Dibuat Dengan Sebenarnya
-            Untuk Dapat Dipergunakan Sebagaimana Mestinya.
-        </p>
-
     </div>
 
-    <div class="signature-block">
-        <div class="signature-left">
-            <div style="font-size: 9pt; line-height: 1.6;">
-                Surat Ini Diterbitkan Secara Elektronik Melalui Sistem Informasi Manajemen
-                Administrasi Surat (SIMAS) SMK Pesat IT XPro. Keaslian Dokumen Dapat Diverifikasi
-                Dengan Memindai QR Code Di Sebelah Kanan.
-            </div>
-        </div>
-        <div class="signature-right">
-            <div class="signature-date">
-                Diterbitkan Pada {{ $pengajuan->qr_generated_at?->translatedFormat('d F Y') ?? now()->translatedFormat('d F Y') }}
-            </div>
-            <div class="signature-role">Kepala Sekolah,</div>
+    {{-- CLOSING --}}
+    <p class="closing">
+        Demikian surat tugas ini diberikan untuk dilaksanakan dengan penuh tanggung jawab.
+    </p>
 
-            <div style="height: 45px;"></div>
+    {{-- TANDA TANGAN --}}
+    <table class="signature-section">
+        <tr>
+            <td></td>
+            <td>
+                <div class="signature-box">
+                    <div class="date">Bogor, {{ now()->locale('id')->translatedFormat('d F Y') }}</div>
+                    <div class="role">Kepala Sekolah,</div>
+                    <div class="name">{{ $pengajuan->reviewer?->name ?? 'Adhie Rachmat Saputra, S.Kom.' }}</div>
+                    <div style="font-size: 10pt; margin-top: 2px;">
+                        {{ $pengajuan->reviewer?->nip ? 'NIP. '.$pengajuan->reviewer->nip : '' }}
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
 
-            <div class="signature-name">{{ $pengajuan->reviewer->name ?? 'Kepala Sekolah' }}</div>
-            <div class="signature-nip">NIP. {{ $pengajuan->reviewer->nip ?? '—' }}</div>
-        </div>
-    </div>
-
-    @php
-        $qrPath = storage_path('app/public/qr/' . $pengajuan->qr_token . '.png');
-    @endphp
-    @if($pengajuan->qr_token && file_exists($qrPath))
-        <div class="qr-block">
-            <div class="qr-frame">
-                <img src="data:image/png;base64,{{ base64_encode(file_get_contents($qrPath)) }}" alt="QR">
-            </div>
-            <div class="qr-caption">
-                <strong>✓ TERVERIFIKASI</strong>
-                Scan Untuk Verifikasi Keaslian
-            </div>
-        </div>
-    @endif
-
+    {{-- FOOTER --}}
     <div class="footer">
-        <div class="footer-left">
-            SIMAS · SMK Pesat IT XPro · Dokumen Ini Sah Tanpa Memerlukan Cap Basah
-        </div>
-        <div class="footer-right">
-            {{ $pengajuan->nomor_surat }} · Cetak {{ now()->translatedFormat('d/m/Y H:i') }}
-        </div>
+        Dokumen Resmi SMK Informatika Pesat · Diterbitkan melalui SIMAS
     </div>
 
 </body>

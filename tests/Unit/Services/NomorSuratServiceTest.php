@@ -1,126 +1,132 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Enums\StatusPengajuan;
 use App\Models\BlankoSurat;
 use App\Models\PengajuanSurat;
 use App\Models\Pengaturan;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\NomorSuratService;
-use Carbon\Carbon;
+
 use Database\Seeders\BlankoSuratSeeder;
 use Database\Seeders\PengaturanSeeder;
+use Database\Seeders\RoleSeeder;
 
-beforeEach(function () {
-    $this->seed(BlankoSuratSeeder::class);
-    $this->seed(PengaturanSeeder::class);
-});
+/** @return array{service: NomorSuratService, buatPengajuan: \Closure} */
+function buatKonteksNomorSurat(): array
+{
+    app(BlankoSuratSeeder::class)->run();
+    app(PengaturanSeeder::class)->run();
+    app(RoleSeeder::class)->run();
 
-it('Generate Nomor Pengajuan Format PGJ/YYYY/MM/XXXX', function () {
-    Carbon::setTestNow('2025-10-15 10:00:00');
-    $service = new NomorSuratService;
+    $service = new NomorSuratService();
+    $user = User::factory()->create([
+        'role_id' => Role::query()->where('name', 'guru')->value('id'),
+    ]);
 
-    expect($service->generateNomorPengajuan())->toBe('PGJ/2025/10/0001');
-});
+    $blanko = BlankoSurat::firstOrFail();
 
-it('Increment Nomor Pengajuan Sesuai Urutan', function () {
-    Carbon::setTestNow('2025-10-15');
-    $service = new NomorSuratService;
-    $user = User::factory()->create();
-    $blanko = BlankoSurat::first();
-
-    foreach (range(1, 5) as $i) {
-        PengajuanSurat::create([
-            'nomor_pengajuan' => sprintf('PGJ/2025/10/%04d', $i),
+    $buatPengajuan = function (string $nomorPengajuan, ?string $nomorSurat = null, string $jenis = 'Test') use ($user, $blanko): PengajuanSurat {
+        return PengajuanSurat::create([
+            'nomor_pengajuan' => $nomorPengajuan,
+            'nomor_surat' => $nomorSurat,
             'user_id' => $user->id,
             'blanko_id' => $blanko->id,
             'tanggal_pelaksanaan' => now(),
-            'nama_kegiatan' => "Test {$i}",
-            'jenis_surat' => 'Test',
-        ]);
-    }
-
-    expect($service->generateNomorPengajuan())->toBe('PGJ/2025/10/0006');
-});
-
-it('Reset Nomor Pengajuan Saat Ganti Bulan', function () {
-    Carbon::setTestNow('2025-10-30');
-    $service = new NomorSuratService;
-    $user = User::factory()->create();
-    $blanko = BlankoSurat::first();
-
-    PengajuanSurat::create([
-        'nomor_pengajuan' => 'PGJ/2025/10/0001',
-        'user_id' => $user->id,
-        'blanko_id' => $blanko->id,
-        'tanggal_pelaksanaan' => now(),
-        'nama_kegiatan' => 'Test',
-        'jenis_surat' => 'Test',
-    ]);
-
-    Carbon::setTestNow('2025-11-01');
-    expect($service->generateNomorPengajuan())->toBe('PGJ/2025/11/0001');
-});
-
-it('Reset Nomor Pengajuan Saat Ganti Tahun', function () {
-    Carbon::setTestNow('2025-12-30');
-    $service = new NomorSuratService;
-    $user = User::factory()->create();
-    $blanko = BlankoSurat::first();
-
-    PengajuanSurat::create([
-        'nomor_pengajuan' => 'PGJ/2025/12/0001',
-        'user_id' => $user->id,
-        'blanko_id' => $blanko->id,
-        'tanggal_pelaksanaan' => now(),
-        'nama_kegiatan' => 'Test',
-        'jenis_surat' => 'Test',
-    ]);
-
-    Carbon::setTestNow('2026-01-01');
-    expect($service->generateNomorPengajuan())->toBe('PGJ/2026/01/0001');
-});
-
-it('Generate Nomor Surat Dengan Format Configurable', function () {
-    Carbon::setTestNow('2025-10-15');
-    $service = new NomorSuratService;
-    Pengaturan::updateOrCreate(
-        ['key' => 'surat.format_nomor'],
-        ['value' => '{seq}/{kode}/{unit}/{romawi}/{tahun}'],
-    );
-    Pengaturan::updateOrCreate(['key' => 'surat.kode_unit'], ['value' => 'TU']);
-    Pengaturan::updateOrCreate(['key' => 'surat.reset_seq'], ['value' => 'tahunan']);
-
-    $nomor = $service->generateNomorSurat('ST');
-    expect($nomor)->toBe('001/ST/TU/X/2025');
-});
-
-it('Nomor Surat Tidak Boleh Duplicate', function () {
-    Carbon::setTestNow('2025-10-15');
-    $service = new NomorSuratService;
-    $user = User::factory()->create();
-    $blanko = BlankoSurat::first();
-
-    $nomorList = [];
-    foreach (range(1, 3) as $i) {
-        $nomor = $service->generateNomorSurat('ST');
-
-        PengajuanSurat::create([
-            'nomor_pengajuan' => 'PGJ/2025/10/'.str_pad($i, 4, '0', STR_PAD_LEFT),
-            'nomor_surat' => $nomor,
-            'user_id' => $user->id,
-            'blanko_id' => $blanko->id,
-            'tanggal_pelaksanaan' => now(),
-            'nama_kegiatan' => "Test {$i}",
-            'jenis_surat' => 'Test',
+            'nama_kegiatan' => "Test " . fake()->word(),
+            'jenis_surat' => $jenis,
             'status' => StatusPengajuan::DISETUJUI,
         ]);
+    };
 
-        $nomorList[] = $nomor;
-    }
+    return compact('service', 'buatPengajuan');
+}
 
-    expect($nomorList)->toBe([
-        '001/ST/TU/X/2025',
-        '002/ST/TU/X/2025',
-        '003/ST/TU/X/2025',
-    ]);
+describe('Nomor Pengajuan Internal', function () {
+
+    it('dapat generate format PGJ/YYYY/MM/XXXX', function () {
+        $context = buatKonteksNomorSurat();
+        $this->travelTo('2025-10-15 10:00:00');
+
+        expect($context['service']->generateNomorPengajuan())
+            ->toBe('PGJ/2025/10/0001');
+    });
+
+    it('increment nomor sesuai urutan', function () {
+        $context = buatKonteksNomorSurat();
+        $this->travelTo('2025-10-15');
+
+        foreach (range(1, 5) as $i) {
+            ($context['buatPengajuan'])(sprintf('PGJ/2025/10/%04d', $i));
+        }
+
+        expect($context['service']->generateNomorPengajuan())
+            ->toBe('PGJ/2025/10/0006');
+    });
+
+    it('reset nomor saat ganti bulan', function () {
+        $context = buatKonteksNomorSurat();
+        $this->travelTo('2025-10-30');
+        ($context['buatPengajuan'])('PGJ/2025/10/0001');
+
+        $this->travelTo('2025-11-01');
+        expect($context['service']->generateNomorPengajuan())
+            ->toBe('PGJ/2025/11/0001');
+    });
+
+    it('reset nomor saat ganti tahun', function () {
+        $context = buatKonteksNomorSurat();
+        $this->travelTo('2025-12-30');
+        ($context['buatPengajuan'])('PGJ/2025/12/0001');
+
+        $this->travelTo('2026-01-01');
+        expect($context['service']->generateNomorPengajuan())
+            ->toBe('PGJ/2026/01/0001');
+    });
+});
+
+describe('Nomor Surat Resmi', function () {
+
+    it('dapat generate nomor surat dengan format configurable', function () {
+        $context = buatKonteksNomorSurat();
+        $this->travelTo('2025-10-15');
+
+        Pengaturan::set('surat.format_nomor', '{seq}/{kode}/{unit}/{romawi}/{tahun}');
+        Pengaturan::set('surat.kode_unit', 'TU');
+        Pengaturan::set('surat.reset_seq', 'tahunan');
+
+        $nomor = $context['service']->generateNomorSurat('ST');
+        
+        expect($nomor)->toBe('001/ST/TU/X/2025');
+    });
+
+    it('tidak memperbolehkan nomor surat duplicate', function () {
+        $context = buatKonteksNomorSurat();
+        $this->travelTo('2025-10-15');
+
+        Pengaturan::set('surat.format_nomor', '{seq}/{kode}/{unit}/{romawi}/{tahun}');
+        Pengaturan::set('surat.kode_unit', 'TU');
+        Pengaturan::set('surat.reset_seq', 'tahunan');
+
+        $nomorList = [];
+
+        foreach (range(1, 3) as $i) {
+            $nomor = $context['service']->generateNomorSurat('ST');
+            
+            ($context['buatPengajuan'])(
+                'PGJ/2025/10/' . str_pad((string)$i, 4, '0', STR_PAD_LEFT), 
+                $nomor
+            );
+
+            $nomorList[] = $nomor;
+        }
+
+        expect($nomorList)->toBe([
+            '001/ST/TU/X/2025',
+            '002/ST/TU/X/2025',
+            '003/ST/TU/X/2025',
+        ]);
+    });
 });

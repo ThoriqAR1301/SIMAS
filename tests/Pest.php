@@ -1,54 +1,70 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
-/*
-|--------------------------------------------------------------------------
-| Test Case
-|--------------------------------------------------------------------------
-|
-| The closure you provide to your test functions is always bound to a specific PHPUnit test
-| case class. By default, that class is "PHPUnit\Framework\TestCase". Of course, you may
-| need to change it using the "pest()" function to bind a different classes or traits.
-|
-*/
+
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
-    ->in('Feature');
-
-pest()->extend(TestCase::class)
-    ->use(RefreshDatabase::class)
-    ->in('Unit/Services');
-
-/*
-|--------------------------------------------------------------------------
-| Expectations
-|--------------------------------------------------------------------------
-|
-| When you're writing tests, you often need to check that values meet certain conditions. The
-| "expect()" function gives you access to a set of "expectations" methods that you can use
-| to assert different things. Of course, you may extend the Expectation API at any time.
-|
-*/
+    ->in('Feature', 'Unit');
 
 expect()->extend('toBeOne', function () {
     return $this->toBe(1);
 });
 
-/*
-|--------------------------------------------------------------------------
-| Functions
-|--------------------------------------------------------------------------
-|
-| While Pest is very powerful out-of-the-box, you may have some testing code specific to your
-| project that you don't want to repeat in every file. Here you can also expose helpers as
-| global functions to help you to reduce the number of lines of code in your test files.
-|
-*/
+expect()->extend('toBeSuccess', function () {
+    return $this->toBeInstanceOf(TestResponse::class)->assertOk();
+});
 
-function something()
+expect()->extend('toBeRedirect', function () {
+    return $this->toBeInstanceOf(TestResponse::class)->assertRedirect();
+});
+
+expect()->extend('toBeForbidden', function () {
+    return $this->toBeInstanceOf(TestResponse::class)->assertForbidden();
+});
+
+expect()->extend('toBeNotFound', function () {
+    return $this->toBeInstanceOf(TestResponse::class)->assertNotFound();
+});
+
+expect()->extend('toBeUnauthorized', function () {
+    return $this->toBeInstanceOf(TestResponse::class)->assertUnauthorized();
+});
+
+function getUserByRole(string $roleName): User
 {
-    // ..
+    $role = Role::firstOrCreate(
+        ['name' => $roleName],
+        ['display_name' => ucwords(str_replace('_', ' ', $roleName))]
+    );
+    
+    return User::factory()->create(['role_id' => $role->id]);
+}
+
+function asGuru(): User
+{
+    $user = getUserByRole('guru');
+    test()->actingAs($user);
+    return $user;
+}
+
+function asAdminTu(): User
+{
+    $user = getUserByRole('admin_tu');
+    test()->actingAs($user);
+    return $user;
+}
+
+function asPimpinan(): User
+{
+    $user = getUserByRole('pimpinan');
+    test()->actingAs($user);
+    return $user;
 }

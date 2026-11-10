@@ -1,40 +1,110 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Models\LogAktivitas;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
-test('password can be updated', function () {
-    $user = User::factory()->create();
+describe('Password Update', function () {
 
-    $response = $this
-        ->actingAs($user)
-        ->from('/profile')
-        ->put('/password', [
-            'current_password' => 'password',
-            'password' => 'new-password',
-            'password_confirmation' => 'new-password',
-        ]);
+    test('password can be updated successfully', function () {
+        Log::spy();
 
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/profile');
+        $user = User::factory()->create();
 
-    $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
-});
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->put('/password', [
+                'current_password' => 'password',
+                'password' => 'new-secure-password',
+                'password_confirmation' => 'new-secure-password',
+            ]);
 
-test('correct password must be provided to update password', function () {
-    $user = User::factory()->create();
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/profile');
 
-    $response = $this
-        ->actingAs($user)
-        ->from('/profile')
-        ->put('/password', [
-            'current_password' => 'wrong-password',
-            'password' => 'new-password',
-            'password_confirmation' => 'new-password',
-        ]);
+        $this->assertTrue(Hash::check('new-secure-password', $user->refresh()->password));
 
-    $response
-        ->assertSessionHasErrorsIn('updatePassword', 'current_password')
-        ->assertRedirect('/profile');
+        expect(LogAktivitas::where('aksi', 'update_password')
+            ->where('model_id', $user->id)
+            ->exists())->toBeTrue();
+
+        Log::shouldHaveReceived('info')
+            ->withArgs(fn ($message) => str_contains($message, 'Pengguna memperbarui kata sandi akun'))
+            ->once();
+    });
+
+    test('correct password must be provided to update password', function () {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->put('/password', [
+                'current_password' => 'wrong-password',
+                'password' => 'new-secure-password',
+                'password_confirmation' => 'new-secure-password',
+            ]);
+
+        $response
+            ->assertSessionHasErrorsIn('updatePassword', 'current_password')
+            ->assertRedirect('/profile');
+
+        $this->assertTrue(Hash::check('password', $user->refresh()->password));
+    });
+
+    test('password confirmation must match the new password', function () {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->put('/password', [
+                'current_password' => 'password',
+                'password' => 'new-secure-password',
+                'password_confirmation' => 'different-password',
+            ]);
+
+        $response
+            ->assertSessionHasErrorsIn('updatePassword', 'password')
+            ->assertRedirect('/profile');
+    });
+
+    test('password must meet minimum length requirements', function () {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->put('/password', [
+                'current_password' => 'password',
+                'password' => '123',
+                'password_confirmation' => '123',
+            ]);
+
+        $response
+            ->assertSessionHasErrorsIn('updatePassword', 'password')
+            ->assertRedirect('/profile');
+    });
+
+    test('new password cannot be empty', function () {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->put('/password', [
+                'current_password' => 'password',
+                'password' => '',
+                'password_confirmation' => '',
+            ]);
+
+        $response
+            ->assertSessionHasErrorsIn('updatePassword', 'password')
+            ->assertRedirect('/profile');
+    });
 });

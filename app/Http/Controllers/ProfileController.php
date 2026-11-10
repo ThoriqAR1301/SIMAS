@@ -1,19 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Services\LogAktivitasService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
+    public function __construct(
+        private readonly LogAktivitasService $logService
+    ) {}
+
     public function edit(Request $request): View
     {
         return view('profile.edit', [
@@ -21,25 +26,32 @@ class ProfileController extends Controller
         ]);
     }
 
-    /**
-     * Update the user's profile information.
-     */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $before = $user->toArray();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
+        DB::transaction(function () use ($request, $user) {
+            $user->fill($request->validated());
 
-        $request->user()->save();
+            if ($user->isDirty('email')) {
+                $user->email_verified_at = null;
+            }
 
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+            $user->save();
+        });
+
+        $this->logService->catat(
+            'update_profile',
+            $user,
+            $before,
+            $user->fresh()->toArray()
+        );
+
+        return Redirect::route('profile.edit')
+            ->with('success', 'Profil Anda berhasil diperbarui');
     }
 
-    /**
-     * Delete the user's account.
-     */
     public function destroy(Request $request): RedirectResponse
     {
         $request->validateWithBag('userDeletion', [
@@ -48,13 +60,22 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        Auth::logout();
+        DB::transaction(function () use ($request, $user) {
+            $this->logService->catat(
+                'delete_own_account',
+                $user,
+                $user->toArray(),
+                null
+            );
 
-        $user->delete();
+            Auth::logout();
+            $user->delete();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        });
 
-        return Redirect::to('/');
+        return Redirect::to('/')
+            ->with('success', 'Akun Anda telah berhasil dihapus. Sampai jumpa!');
     }
 }

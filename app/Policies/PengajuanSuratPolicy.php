@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Policies;
 
 use App\Models\PengajuanSurat;
@@ -7,6 +9,11 @@ use App\Models\User;
 
 class PengajuanSuratPolicy
 {
+    public function before(User $user, string $ability): ?bool
+    {
+        return null;
+    }
+
     public function viewAny(User $user): bool
     {
         return true;

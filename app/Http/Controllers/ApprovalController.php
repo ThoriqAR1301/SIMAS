@@ -1,79 +1,124 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Models\PengajuanSurat;
 use App\Services\ApprovalService;
+use App\Services\LogAktivitasService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class ApprovalController extends Controller
 {
-    public function __construct(private ApprovalService $service) {}
+    public function __construct(
+        private readonly ApprovalService $service,
+        private readonly LogAktivitasService $logService,
+    ) {}
 
-    public function index()
+    public function index(Request $request): View
     {
-        $user = $this->authenticatedUser();
+        $user = $request->user();
+
         $step = $user->isAdminTu() ? 1 : 2;
 
-        $pengajuan = PengajuanSurat::with(['user', 'blanko'])->menungguApproval($step)->latest()->paginate(15);
+        $pengajuan = PengajuanSurat::with(['user', 'blanko'])
+            ->menungguApproval($step)
+            ->latest()
+            ->paginate(15);
 
         return view('approval.index', compact('pengajuan', 'step'));
     }
 
-    public function verify(Request $request, PengajuanSurat $pengajuan)
+    public function verify(Request $request, PengajuanSurat $pengajuan): RedirectResponse
     {
         $this->authorize('verify', $pengajuan);
 
-        $data = $request->validate([
-            'catatan' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $data = $this->validasiCatatan($request);
 
-        $this->service->verifikasiAdmin($pengajuan, $this->authenticatedUser(), $data['catatan'] ?? null);
+        $this->service->verifikasiAdmin($pengajuan, $request->user(), $data['catatan'] ?? null);
 
-        return back()->with('success', 'Pengajuan Diteruskan Ke Pimpinan');
+        $this->logService->catat(
+            'verify_pengajuan',
+            $pengajuan,
+            null,
+            ['info' => 'Admin TU memverifikasi pengajuan']
+        );
+
+        return back()->with('success', 'Pengajuan berhasil diverifikasi dan diteruskan ke Pimpinan');
     }
 
-    public function approve(Request $request, PengajuanSurat $pengajuan)
+    public function approve(Request $request, PengajuanSurat $pengajuan): RedirectResponse
     {
         $this->authorize('approve', $pengajuan);
 
-        $data = $request->validate([
-            'catatan' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $data = $this->validasiCatatan($request);
 
-        $this->service->approvePimpinan($pengajuan, $this->authenticatedUser(), $data['catatan'] ?? null);
+        $this->service->approvePimpinan($pengajuan, $request->user(), $data['catatan'] ?? null);
 
-        return back()->with('success', 'Pengajuan Disetujui & Nomor Surat Telah Di-Generate');
+        $this->logService->catat(
+            'approve_pengajuan',
+            $pengajuan,
+            null,
+            ['info' => 'Pimpinan menyetujui pengajuan secara final']
+        );
+
+        return back()->with('success', 'Pengajuan disetujui & Nomor Surat telah di-generate secara otomatis');
     }
 
-    public function reject(Request $request, PengajuanSurat $pengajuan)
+    public function reject(Request $request, PengajuanSurat $pengajuan): RedirectResponse
     {
         $data = $request->validate([
             'catatan' => ['required', 'string', 'max:1000'],
         ]);
 
+        $user = $request->user();
         $step = $pengajuan->current_step;
-        abort_unless(in_array($step, [1, 2]), 403);
+
+        abort_unless(in_array($step, [1, 2], true), 403);
 
         if ($step === 1) {
-            abort_unless($this->authenticatedUser()->isAdminTu(), 403);
+            abort_unless($user->isAdminTu(), 403);
         } else {
-            abort_unless($this->authenticatedUser()->isPimpinan(), 403);
+            abort_unless($user->isPimpinan(), 403);
         }
 
-        $this->service->reject($pengajuan, $this->authenticatedUser(), $data['catatan']);
+        $this->service->reject($pengajuan, $user, $data['catatan']);
 
-        return back()->with('success', 'Pengajuan Ditolak');
+        $this->logService->catat(
+            'reject_pengajuan',
+            $pengajuan,
+            null,
+            ['info' => 'Pengajuan ditolak pada step '.$step.'. Alasan : '.$data['catatan']]
+        );
+
+        return back()->with('success', 'Pengajuan telah ditolak');
     }
 
-    public function mintaRevisi(Request $request, PengajuanSurat $pengajuan)
+    public function mintaRevisi(Request $request, PengajuanSurat $pengajuan): RedirectResponse
     {
         $data = $request->validate([
             'catatan' => ['required', 'string', 'max:1000'],
         ]);
 
-        $this->service->mintaRevisi($pengajuan, $this->authenticatedUser(), $data['catatan']);
+        $this->service->mintaRevisi($pengajuan, $request->user(), $data['catatan']);
 
-        return back()->with('success', 'Pengajuan Dikembalikan Ke Guru Untuk Direvisi');
+        $this->logService->catat(
+            'revisi_pengajuan',
+            $pengajuan,
+            null,
+            ['info' => 'Pengajuan dikembalikan ke Guru untuk direvisi. Catatan : '.$data['catatan']]
+        );
+
+        return back()->with('success', 'Pengajuan dikembalikan ke Guru untuk direvisi');
+    }
+
+    private function validasiCatatan(Request $request): array
+    {
+        return $request->validate([
+            'catatan' => ['nullable', 'string', 'max:1000'],
+        ]);
     }
 }

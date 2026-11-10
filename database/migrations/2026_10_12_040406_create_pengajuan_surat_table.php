@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -10,30 +12,77 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('pengajuan_surat', function (Blueprint $table) {
+            $table->engine = 'InnoDB';
+            $table->charset = 'utf8mb4';
+            $table->collation = 'utf8mb4_unicode_ci';
+
             $table->id();
-            $table->string('nomor_pengajuan', 50)->unique();
-            $table->string('nomor_surat', 50)->unique()->nullable();
-            $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
-            $table->foreignId('blanko_id')->constrained('blanko_surat')->restrictOnDelete();
 
-            $table->date('tanggal_pelaksanaan');
-            $table->time('waktu_mulai')->nullable();
-            $table->time('waktu_selesai')->nullable();
-            $table->string('tempat', 200)->nullable();
-            $table->string('nama_kegiatan', 200);
-            $table->string('jenis_surat', 50);
-            $table->text('keterangan')->nullable();
+            $table->string('nomor_pengajuan', 50)->unique()
+                ->comment('Nomor internal pengajuan (contoh: PGJ/2025/10/0001)');
 
-            $table->enum('status', ['draft', 'diajukan', 'diproses', 'disetujui', 'ditolak', 'selesai'])->default('draft');
-            $table->tinyInteger('current_step')->default(0);
-            $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamp('reviewed_at')->nullable();
-            $table->text('catatan_reviewer')->nullable();
+            $table->string('nomor_surat', 50)->unique()->nullable()
+                ->comment('Nomor surat resmi (di-generate saat disetujui)');
 
-            $table->char('qr_token', 36)->unique()->nullable();
-            $table->timestamp('qr_generated_at')->nullable();
+            $table->foreignId('user_id')
+                ->constrained('users')
+                ->restrictOnDelete()
+                ->comment('ID Guru/Pegawai yang mengajukan');
+
+            $table->foreignId('blanko_id')
+                ->constrained('blanko_surat')
+                ->restrictOnDelete()
+                ->comment('ID Blanko Surat yang digunakan');
+
+            $table->date('tanggal_pelaksanaan')
+                ->comment('Tanggal kegiatan akan dilaksanakan');
+
+            $table->time('waktu_mulai')->nullable()
+                ->comment('Jam mulai kegiatan');
+
+            $table->time('waktu_selesai')->nullable()
+                ->comment('Jam selesai kegiatan');
+
+            $table->string('tempat', 200)->nullable()
+                ->comment('Tempat pelaksanaan kegiatan');
+
+            $table->string('nama_kegiatan', 200)
+                ->comment('Nama kegiatan yang diajukan');
+
+            $table->string('jenis_surat', 50)
+                ->comment('Jenis surat yang diajukan');
+
+            $table->text('keterangan')->nullable()
+                ->comment('Catatan tambahan dari pengaju');
+
+            $table->enum('status', [
+                'draft', 'diajukan', 'diproses', 'disetujui', 'ditolak', 'selesai',
+            ])->default('draft')
+                ->comment('Status alur persetujuan');
+
+            $table->tinyInteger('current_step')->default(0)
+                ->comment('Tahap persetujuan (0=Draft, 1=Admin, 2=Pimpinan, 3=Selesai)');
+
+            $table->foreignId('reviewed_by')->nullable()
+                ->constrained('users')
+                ->nullOnDelete()
+                ->comment('ID User yang terakhir memproses');
+
+            $table->timestamp('reviewed_at')->nullable()
+                ->comment('Waktu terakhir diproses');
+
+            $table->text('catatan_reviewer')->nullable()
+                ->comment('Catatan dari Admin/Pimpinan');
+
+            $table->char('qr_token', 36)->unique()->nullable()
+                ->comment('UUID unik untuk verifikasi publik');
+
+            $table->timestamp('qr_generated_at')->nullable()
+                ->comment('Waktu QR Code dibuat');
 
             $table->timestamps();
+
+            $table->softDeletes();
 
             $table->index('user_id');
             $table->index('blanko_id');

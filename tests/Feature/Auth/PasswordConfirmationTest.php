@@ -1,32 +1,72 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
-test('confirm password screen can be rendered', function () {
-    $user = User::factory()->create();
+describe('Password Confirmation', function () {
 
-    $response = $this->actingAs($user)->get('/confirm-password');
+    test('confirm password screen can be rendered', function () {
+        $user = User::factory()->create();
 
-    $response->assertStatus(200);
-});
+        $response = $this->actingAs($user)->get('/confirm-password');
 
-test('password can be confirmed', function () {
-    $user = User::factory()->create();
+        $response->assertStatus(200);
+    });
 
-    $response = $this->actingAs($user)->post('/confirm-password', [
-        'password' => 'password',
-    ]);
+    test('password can be confirmed successfully', function () {
+        Log::spy();
 
-    $response->assertRedirect();
-    $response->assertSessionHasNoErrors();
-});
+        $user = User::factory()->create();
 
-test('password is not confirmed with invalid password', function () {
-    $user = User::factory()->create();
+        $response = $this->actingAs($user)->post('/confirm-password', [
+            'password' => 'password',
+        ]);
 
-    $response = $this->actingAs($user)->post('/confirm-password', [
-        'password' => 'wrong-password',
-    ]);
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
 
-    $response->assertSessionHasErrors();
+        Log::shouldHaveReceived('info')
+            ->withArgs(fn ($message) => str_contains($message, 'Konfirmasi password berhasil'))
+            ->once();
+    });
+
+    test('password is not confirmed with invalid password', function () {
+        Log::spy();
+
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->post('/confirm-password', [
+            'password' => 'wrong-password',
+        ]);
+
+        $response->assertSessionHasErrors();
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn ($message) => str_contains($message, 'Percobaan konfirmasi password gagal'))
+            ->once();
+    });
+
+    test('password confirmation requires a password', function () {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->post('/confirm-password', [
+            'password' => '',
+        ]);
+
+        $response->assertSessionHasErrors('password');
+    });
+
+    test('user is redirected back to intended url after confirmation', function () {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/profile');
+
+        $response = $this->actingAs($user)->post('/confirm-password', [
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect(route('profile.edit'));
+    });
 });

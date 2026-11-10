@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Events;
 
 use App\Models\PengajuanSurat;
@@ -11,7 +13,21 @@ class PengajuanApproved
     use Dispatchable, SerializesModels;
 
     public function __construct(
-        public PengajuanSurat $pengajuan,
-        public int $step,
+        public readonly PengajuanSurat $pengajuan,
+        public readonly int $step,
     ) {}
+
+    public function getStepLabel(): string
+    {
+        return match ($this->step) {
+            1 => 'Admin Tata Usaha',
+            2 => 'Pimpinan',
+            default => 'Sistem',
+        };
+    }
+
+    public function isFinalApproval(): bool
+    {
+        return $this->step === 2;
+    }
 }

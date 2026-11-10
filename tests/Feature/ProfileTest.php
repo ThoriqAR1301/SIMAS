@@ -1,85 +1,150 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Models\LogAktivitas;
 use App\Models\User;
 
-test('profile page is displayed', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->get('/profile');
-
-    $response->assertOk();
+beforeEach(function () {
+    /** @var User $this->user */
+    $this->user = User::factory()->create();
 });
 
-test('profile information can be updated', function () {
-    $user = User::factory()->create();
+describe('User Profile', function () {
 
-    $response = $this
-        ->actingAs($user)
-        ->patch('/profile', [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+    describe('Page Rendering', function () {
+        
+        test('profile page is displayed', function () {
+            $response = $this->actingAs($this->user)->get('/profile');
+            $response->assertOk();
+        });
 
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/profile');
+        test('guest cannot access profile page', function () {
+            $this->get('/profile')->assertRedirect(route('login'));
+        });
+    });
 
-    $user->refresh();
+    describe('Profile Update', function () {
+        
+        test('profile information can be updated', function () {
+            $response = $this
+                ->actingAs($this->user)
+                ->patch('/profile', [
+                    'name' => 'Test User Baru',
+                    'email' => 'test@example.com',
+                ]);
 
-    $this->assertSame('Test User', $user->name);
-    $this->assertSame('test@example.com', $user->email);
-    $this->assertNull($user->email_verified_at);
-});
+            $response
+                ->assertSessionHasNoErrors()
+                ->assertRedirect('/profile');
 
-test('email verification status is unchanged when the email address is unchanged', function () {
-    $user = User::factory()->create();
+            $this->user->refresh();
 
-    $response = $this
-        ->actingAs($user)
-        ->patch('/profile', [
-            'name' => 'Test User',
-            'email' => $user->email,
-        ]);
+            $this->assertSame('Test User Baru', $this->user->name);
+            $this->assertSame('test@example.com', $this->user->email);
+            
+            $this->assertNull($this->user->email_verified_at);
 
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/profile');
+            expect(LogAktivitas::where('aksi', 'update_profile')
+                ->where('model_id', $this->user->id)
+                ->exists())->toBeTrue();
+        });
 
-    $this->assertNotNull($user->refresh()->email_verified_at);
-});
+        test('email verification status is unchanged when the email address is unchanged', function () {
+            $response = $this
+                ->actingAs($this->user)
+                ->patch('/profile', [
+                    'name' => 'Test User Baru',
+                    'email' => $this->user->email, 
+                ]);
 
-test('user can delete their account', function () {
-    $user = User::factory()->create();
+            $response
+                ->assertSessionHasNoErrors()
+                ->assertRedirect('/profile');
 
-    $response = $this
-        ->actingAs($user)
-        ->delete('/profile', [
-            'password' => 'password',
-        ]);
+            $this->assertNotNull($this->user->refresh()->email_verified_at);
+        });
 
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/');
+        test('email is sanitized to lowercase and trimmed during update', function () {
+            $this->actingAs($this->user)
+                ->patch('/profile', [
+                    'name' => 'Test User',
+                    'email' => 'TEST@EXAMPLE.COM  ', 
+                ]);
 
-    $this->assertGuest();
-    $this->assertNull($user->fresh());
-});
+            $this->user->refresh();
+            
+            $this->assertSame('test@example.com', $this->user->email);
+        });
+    });
 
-test('correct password must be provided to delete account', function () {
-    $user = User::factory()->create();
+    describe('Account Deletion', function () {
+        
+        test('user can delete their account', function () {
+            $response = $this
+                ->actingAs($this->user)
+                ->delete('/profile', [
+                    'password' => 'password',
+                ]);
 
-    $response = $this
-        ->actingAs($user)
-        ->from('/profile')
-        ->delete('/profile', [
-            'password' => 'wrong-password',
-        ]);
+            $response
+                ->assertSessionHasNoErrors()
+                ->assertRedirect('/');
 
-    $response
-        ->assertSessionHasErrorsIn('userDeletion', 'password')
-        ->assertRedirect('/profile');
+            $this->assertGuest();
+            $this->assertNull($this->user->fresh());
 
-    $this->assertNotNull($user->fresh());
+            expect(LogAktivitas::where('aksi', 'delete_own_account')
+                ->where('model_id', $this->user->id)
+                ->exists())->toBeTrue();
+        });
+
+        test('correct password must be provided to delete account', function () {
+            $response = $this
+                ->actingAs($this->user)
+                ->from('/profile')
+                ->delete('/profile', [
+                    'password' => 'wrong-password',
+                ]);
+
+            $response
+                ->assertSessionHasErrorsIn('userDeletion', 'password')
+                ->assertRedirect('/profile');
+
+            $this->assertNotNull($this->user->fresh());
+        });
+    });
+
+    describe('Validation Rules', function () {
+        
+        test('name cannot exceed 255 characters', function () {
+            $this->actingAs($this->user)
+                ->patch('/profile', [
+                    'name' => str_repeat('A', 256),
+                    'email' => 'test@example.com',
+                ])
+                ->assertSessionHasErrors('name');
+        });
+
+        test('email must be a valid format', function () {
+            $this->actingAs($this->user)
+                ->patch('/profile', [
+                    'name' => 'Test User',
+                    'email' => 'bukan-email-valid',
+                ])
+                ->assertSessionHasErrors('email');
+        });
+
+        test('email must be unique (cannot use another users email)', function () {
+            $otherUser = User::factory()->create(['email' => 'other@example.com']);
+
+            $this->actingAs($this->user)
+                ->patch('/profile', [
+                    'name' => 'Test User',
+                    'email' => 'other@example.com',
+                ])
+                ->assertSessionHasErrors('email');
+        });
+    });
+
 });

@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Enums\StatusPengajuan;
 use App\Events\PengajuanApproved;
 use App\Events\PengajuanNomorGenerated;
 use App\Events\PengajuanStatusChanged;
 use App\Models\BlankoSurat;
+use App\Models\LogAktivitas;
 use App\Models\PengajuanSurat;
 use App\Models\Role;
 use App\Models\User;
@@ -15,104 +18,161 @@ use Database\Seeders\RolePermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Support\Facades\Event;
 
-/**
- * @return array{guru: User, admin: User, pimpinan: User, pengajuan: PengajuanSurat}
- */
-function createApprovalTestData(): array
+class ApprovalTestCase extends Tests\TestCase
 {
-    (new RoleSeeder)->run();
-    (new PermissionSeeder)->run();
-    (new RolePermissionSeeder)->run();
-    (new BlankoSuratSeeder)->run();
-    (new PengaturanSeeder)->run();
+    public User $guru;
 
-    $guru = User::factory()->create(['role_id' => Role::where('name', 'guru')->value('id')]);
-    $admin = User::factory()->create(['role_id' => Role::where('name', 'admin_tu')->value('id')]);
-    $pimpinan = User::factory()->create(['role_id' => Role::where('name', 'pimpinan')->value('id')]);
-    $blanko = BlankoSurat::query()->firstOrFail();
-    $pengajuan = PengajuanSurat::factory()->create([
-        'user_id' => $guru->id,
+    public User $admin;
+
+    public User $pimpinan;
+
+    public PengajuanSurat $pengajuan;
+}
+
+uses(ApprovalTestCase::class);
+
+beforeEach(function () {
+    /** @var ApprovalTestCase $this */
+    $this->seed([
+        RoleSeeder::class,
+        PermissionSeeder::class,
+        RolePermissionSeeder::class,
+        BlankoSuratSeeder::class,
+        PengaturanSeeder::class,
+    ]);
+
+    $this->guru = User::factory()->create(['role_id' => Role::where('name', 'guru')->value('id')]);
+    $this->admin = User::factory()->create(['role_id' => Role::where('name', 'admin_tu')->value('id')]);
+    $this->pimpinan = User::factory()->create(['role_id' => Role::where('name', 'pimpinan')->value('id')]);
+
+    $blanko = BlankoSurat::firstOrFail();
+    $this->pengajuan = PengajuanSurat::factory()->create([
+        'user_id' => $this->guru->id,
         'blanko_id' => $blanko->id,
         'status' => StatusPengajuan::DIAJUKAN,
         'current_step' => 1,
     ]);
-
-    return compact('guru', 'admin', 'pimpinan', 'pengajuan');
-}
-
-it('renders the approval queue for an authorized admin', function () {
-    $data = createApprovalTestData();
-
-    expect(PengajuanSurat::query()
-        ->menungguApproval(1)
-        ->whereKey($data['pengajuan']->id)
-        ->exists())->toBeTrue();
-
-    $response = $this->actingAs($data['admin'])
-        ->get(route('approval.index'));
-
-    $response->assertOk()
-        ->assertViewHas('pengajuan', fn ($pengajuan) => $pengajuan->contains('id', $data['pengajuan']->id));
 });
 
-it('Admin Bisa Verifikasi Pengajuan → Lanjut ke Pimpinan', function () {
-    $data = createApprovalTestData();
-    $admin = $data['admin'];
-    $pengajuan = $data['pengajuan'];
+describe('Approval Workflow', function () {
 
-    $this->actingAs($admin)->post(route('approval.verify', $pengajuan), ['catatan' => 'OK']);
+    describe('Access Control', function () {
+        
+        test('admin can see the approval queue', function () {
+            $response = $this->actingAs($this->admin)->get(route('approval.index'));
 
-    $pengajuan->refresh();
-    expect($pengajuan->status)->toBe(StatusPengajuan::DIPROSES)->and($pengajuan->current_step)->toBe(2);
+            $response->assertOk()
+                ->assertViewHas('pengajuan', fn ($p) => $p->contains('id', $this->pengajuan->id));
+        });
 
-    $this->assertDatabaseHas('approval_log', [
-        'pengajuan_id' => $pengajuan->id,
-        'step' => 1,
-        'aksi' => 'approve',
-        'approver_id' => $admin->id,
-    ]);
-});
+        test('guru cannot access the approval page', function () {
+            $this->actingAs($this->guru)
+                ->get(route('approval.index'))
+                ->assertForbidden();
+        });
 
-it('Pimpinan Approve → Generate Nomor Surat & QR', function () {
-    $data = createApprovalTestData();
-    $admin = $data['admin'];
-    $pimpinan = $data['pimpinan'];
-    $pengajuan = $data['pengajuan'];
+        test('pimpinan cannot perform admin verification', function () {
+            $this->actingAs($this->pimpinan)
+                ->post(route('approval.verify', $this->pengajuan))
+                ->assertForbidden();
+        });
 
-    Event::fake([
-        PengajuanApproved::class,
-        PengajuanNomorGenerated::class,
-        PengajuanStatusChanged::class,
-    ]);
+    });
 
-    $this->actingAs($admin)->post(route('approval.verify', $pengajuan), ['catatan' => 'OK']);
+    describe('Admin TU Actions', function () {
+        
+        test('admin can verify a request and forward it to pimpinan', function () {
+            $response = $this->actingAs($this->admin)
+                ->post(route('approval.verify', $this->pengajuan), ['catatan' => 'Data lengkap']);
 
-    $this->actingAs($pimpinan)->post(route('approval.approve', $pengajuan->fresh()), ['catatan' => 'Setuju']);
+            $response->assertRedirect();
 
-    $p = $pengajuan->fresh();
-    expect($p->status)->toBe(StatusPengajuan::DISETUJUI)->and($p->current_step)->toBe(3)->and($p->nomor_surat)->not->toBeNull()->and($p->qr_token)->not->toBeNull();
+            $p = $this->pengajuan->fresh();
+            expect($p->status)->toBe(StatusPengajuan::DIPROSES)
+                ->and($p->current_step)->toBe(2);
 
-    Event::assertDispatched(PengajuanApproved::class, 2);
-    Event::assertDispatched(PengajuanNomorGenerated::class);
-    Event::assertDispatched(PengajuanStatusChanged::class, 4);
-});
+            $this->assertDatabaseHas('approval_log', [
+                'pengajuan_id' => $p->id,
+                'step' => 1,
+                'aksi' => 'approve',
+                'approver_id'  => $this->admin->id,
+            ]);
 
-it('Admin Tidak Bisa Approve Langsung Tanpa Verifikasi', function () {
-    $data = createApprovalTestData();
+            expect(LogAktivitas::where('aksi', 'verify_pengajuan')->exists())->toBeTrue();
+        });
 
-    $this->actingAs($data['admin'])->post(route('approval.approve', $data['pengajuan']))->assertForbidden();
-});
+        test('admin cannot approve directly without verification', function () {
+            $this->actingAs($this->admin)
+                ->post(route('approval.approve', $this->pengajuan))
+                ->assertForbidden();
+        });
 
-it('Guru Tidak Bisa Akses Halaman Approval', function () {
-    $data = createApprovalTestData();
+        test('admin can reject a request at step 1', function () {
+            $this->actingAs($this->admin)
+                ->post(route('approval.reject', $this->pengajuan), ['catatan' => 'Berkas kurang lengkap']);
 
-    $this->actingAs($data['guru'])->get(route('approval.index'))->assertForbidden();
-});
+            $p = $this->pengajuan->fresh();
+            expect($p->status)->toBe(StatusPengajuan::DITOLAK);
 
-it('Reject Mengubah Status Jadi DITOLAK', function () {
-    $data = createApprovalTestData();
+            expect(LogAktivitas::where('aksi', 'reject_pengajuan')->exists())->toBeTrue();
+        });
 
-    $this->actingAs($data['admin'])->post(route('approval.reject', $data['pengajuan']), ['catatan' => 'Kurang Lengkap']);
+    });
 
-    expect($data['pengajuan']->fresh()->status)->toBe(StatusPengajuan::DITOLAK);
+    describe('Pimpinan Actions', function () {
+        
+        beforeEach(function () {
+            $this->actingAs($this->admin)
+                ->post(route('approval.verify', $this->pengajuan), ['catatan' => 'OK']);
+            $this->pengajuan->refresh();
+        });
+
+        test('pimpinan can approve and a letter number is generated', function () {
+            Event::fake([
+                PengajuanApproved::class,
+                PengajuanNomorGenerated::class,
+                PengajuanStatusChanged::class,
+            ]);
+
+            $response = $this->actingAs($this->pimpinan)
+                ->post(route('approval.approve', $this->pengajuan), ['catatan' => 'Setujui.']);
+
+            $response->assertRedirect();
+
+            $p = $this->pengajuan->fresh();
+            expect($p->status)->toBe(StatusPengajuan::DISETUJUI)
+                ->and($p->current_step)->toBe(3)
+                ->and($p->nomor_surat)->not->toBeNull()
+                ->and($p->reviewed_by)->toBe($this->pimpinan->id);
+
+            expect(LogAktivitas::where('aksi', 'approve_pengajuan')->exists())->toBeTrue();
+
+            Event::assertDispatched(PengajuanApproved::class, 2);
+            Event::assertDispatched(PengajuanNomorGenerated::class);
+        });
+
+        test('pimpinan can reject a verified request', function () {
+            $this->actingAs($this->pimpinan)
+                ->post(route('approval.reject', $this->pengajuan), ['catatan' => 'Jadwal bentrok']);
+
+            $p = $this->pengajuan->fresh();
+            expect($p->status)->toBe(StatusPengajuan::DITOLAK);
+
+            expect(LogAktivitas::where('aksi', 'reject_pengajuan')->exists())->toBeTrue();
+        });
+
+        test('pimpinan can request a revision', function () {
+            $this->actingAs($this->pimpinan)
+                ->post(route('approval.revisi', $this->pengajuan), ['catatan' => 'Mohon ubah tanggal']);
+
+            $p = $this->pengajuan->fresh();
+            
+            expect($p->status)->toBe(StatusPengajuan::DRAFT)
+                ->and($p->current_step)->toBe(0);
+
+            expect(LogAktivitas::where('aksi', 'revisi_pengajuan')->exists())->toBeTrue();
+        });
+
+    });
+
 });

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\StatusPengajuan;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -18,15 +19,16 @@ class PengajuanSurat extends Model
         'tanggal_pelaksanaan', 'waktu_mulai', 'waktu_selesai',
         'tempat', 'nama_kegiatan', 'jenis_surat', 'keterangan',
         'status', 'current_step', 'reviewed_by', 'reviewed_at',
-        'catatan_reviewer', 'qr_token', 'qr_generated_at',
+        'catatan_reviewer', 'panitia',
     ];
 
     protected $casts = [
         'tanggal_pelaksanaan' => 'date',
         'reviewed_at' => 'datetime',
-        'qr_generated_at' => 'datetime',
+        
         'status' => StatusPengajuan::class,
         'current_step' => 'integer',
+        'panitia' => 'array',
     ];
 
     public function user()
@@ -54,19 +56,19 @@ class PengajuanSurat extends Model
         return $this->morphMany(Lampiran::class, 'attachable');
     }
 
-    public function scopeMilik($query, int $userId)
+    public function scopeMilik(Builder $query, int $userId)
     {
         return $query->where('user_id', $userId);
     }
 
-    public function scopeStatus($query, StatusPengajuan|string $status)
+    public function scopeStatus(Builder $query, StatusPengajuan|string $status)
     {
         $value = $status instanceof StatusPengajuan ? $status->value : $status;
 
         return $query->where('status', $value);
     }
 
-    public function scopeMenungguApproval($query, int $step)
+    public function scopeMenungguApproval(Builder $query, int $step)
     {
         return $query->where('current_step', $step)
             ->whereIn('status', [
@@ -75,7 +77,7 @@ class PengajuanSurat extends Model
             ]);
     }
 
-    public function scopeCari($query, string $keyword)
+    public function scopeCari(Builder $query, string $keyword)
     {
         return $query->where(function ($q) use ($keyword) {
             $q->where('nomor_pengajuan', 'like', "%{$keyword}%")
@@ -85,7 +87,7 @@ class PengajuanSurat extends Model
         });
     }
 
-    public function scopeRentangTanggal($query, ?string $dari, ?string $sampai)
+    public function scopeRentangTanggal(Builder $query, ?string $dari, ?string $sampai)
     {
         return $query->when($dari, fn ($q) => $q->whereDate('tanggal_pelaksanaan', '>=', $dari))->when($sampai, fn ($q) => $q->whereDate('tanggal_pelaksanaan', '<=', $sampai));
     }
@@ -134,7 +136,7 @@ class PengajuanSurat extends Model
         };
     }
 
-    public function scopeFilterIndex($query, array $filters, User $user)
+    public function scopeFilterIndex(Builder $query, array $filters, User $user)
     {
         return $query
             ->with(['blanko', 'user'])

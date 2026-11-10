@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Enums\StatusPengajuan;
@@ -15,15 +17,11 @@ use Illuminate\Support\Facades\DB;
 class ApprovalService
 {
     public function __construct(
-        private NomorSuratService $nomorService,
-        private QrCodeService $qrService,
+        private readonly NomorSuratService $nomorService,
     ) {}
 
-    public function verifikasiAdmin(
-        PengajuanSurat $pengajuan,
-        User $admin,
-        ?string $catatan = null,
-    ): void {
+    public function verifikasiAdmin(PengajuanSurat $pengajuan, User $admin, ?string $catatan = null): void
+    {
         $this->pastikanStep($pengajuan, 1);
 
         $fresh = DB::transaction(function () use ($pengajuan, $admin, $catatan) {
@@ -35,33 +33,21 @@ class ApprovalService
                 'catatan_reviewer' => $catatan,
             ]);
 
-            ApprovalLog::create([
-                'pengajuan_id' => $pengajuan->id,
-                'step' => 1,
-                'approver_id' => $admin->id,
-                'aksi' => 'approve',
-                'catatan' => $catatan,
-                'acted_at' => now(),
-            ]);
+            $this->catatLog($pengajuan, $admin, 1, 'approve', $catatan);
 
             return $pengajuan->refresh();
         });
 
-        broadcast(new PengajuanStatusChanged($fresh, 'pimpinan', 'verified'))->toOthers();
-        broadcast(new PengajuanStatusChanged($fresh, 'guru', 'verified'))->toOthers();
+        $this->broadcastKeRole($fresh, ['pimpinan', 'guru'], 'verified');
         event(new PengajuanApproved($fresh, 1));
     }
 
-    public function approvePimpinan(
-        PengajuanSurat $pengajuan,
-        User $pimpinan,
-        ?string $catatan = null,
-    ): PengajuanSurat {
+    public function approvePimpinan(PengajuanSurat $pengajuan, User $pimpinan, ?string $catatan = null): PengajuanSurat
+    {
         $this->pastikanStep($pengajuan, 2);
 
         $fresh = DB::transaction(function () use ($pengajuan, $pimpinan, $catatan) {
             $nomorSurat = $this->nomorService->generateNomorSurat($pengajuan->blanko->kode);
-            $qrToken = $this->qrService->generateToken();
 
             $pengajuan->update([
                 'nomor_surat' => $nomorSurat,
@@ -70,41 +56,24 @@ class ApprovalService
                 'reviewed_by' => $pimpinan->id,
                 'reviewed_at' => now(),
                 'catatan_reviewer' => $catatan,
-                'qr_token' => $qrToken,
-                'qr_generated_at' => now(),
+
             ]);
 
-            $this->qrService->generateQrImage($qrToken);
-
-            ApprovalLog::create([
-                'pengajuan_id' => $pengajuan->id,
-                'step' => 2,
-                'approver_id' => $pimpinan->id,
-                'aksi' => 'approve',
-                'catatan' => $catatan,
-                'acted_at' => now(),
-            ]);
+            $this->catatLog($pengajuan, $pimpinan, 2, 'approve', $catatan);
 
             return $pengajuan->refresh();
         });
 
-        broadcast(new PengajuanStatusChanged($fresh, 'guru', 'approved'))->toOthers();
-        broadcast(new PengajuanStatusChanged($fresh, 'admin_tu', 'approved'))->toOthers();
+        $this->broadcastKeRole($fresh, ['guru', 'admin_tu'], 'approved');
         event(new PengajuanNomorGenerated($fresh));
         event(new PengajuanApproved($fresh, 2));
 
         return $fresh;
     }
 
-    public function reject(
-        PengajuanSurat $pengajuan,
-        User $approver,
-        string $catatan,
-    ): void {
-        $step = $pengajuan->current_step;
-        if (! in_array($step, [1, 2])) {
-            throw new \RuntimeException('Pengajuan Tidak Dalam Tahap Approval');
-        }
+    public function reject(PengajuanSurat $pengajuan, User $approver, string $catatan): void
+    {
+        $step = $this->validasiTahapApproval($pengajuan);
 
         $fresh = DB::transaction(function () use ($pengajuan, $approver, $catatan, $step) {
             $pengajuan->update([
@@ -114,31 +83,18 @@ class ApprovalService
                 'catatan_reviewer' => $catatan,
             ]);
 
-            ApprovalLog::create([
-                'pengajuan_id' => $pengajuan->id,
-                'step' => $step,
-                'approver_id' => $approver->id,
-                'aksi' => 'reject',
-                'catatan' => $catatan,
-                'acted_at' => now(),
-            ]);
+            $this->catatLog($pengajuan, $approver, $step, 'reject', $catatan);
 
             return $pengajuan->refresh();
         });
 
-        broadcast(new PengajuanStatusChanged($fresh, 'guru', 'rejected'))->toOthers();
+        $this->broadcastKeRole($fresh, ['guru'], 'rejected');
         event(new PengajuanRejected($fresh));
     }
 
-    public function mintaRevisi(
-        PengajuanSurat $pengajuan,
-        User $approver,
-        string $catatan,
-    ): void {
-        $step = $pengajuan->current_step;
-        if (! in_array($step, [1, 2])) {
-            throw new \RuntimeException('Pengajuan Tidak Dalam Tahap Approval');
-        }
+    public function mintaRevisi(PengajuanSurat $pengajuan, User $approver, string $catatan): void
+    {
+        $step = $this->validasiTahapApproval($pengajuan);
 
         $fresh = DB::transaction(function () use ($pengajuan, $approver, $catatan, $step) {
             $pengajuan->update([
@@ -149,27 +105,49 @@ class ApprovalService
                 'catatan_reviewer' => $catatan,
             ]);
 
-            ApprovalLog::create([
-                'pengajuan_id' => $pengajuan->id,
-                'step' => $step,
-                'approver_id' => $approver->id,
-                'aksi' => 'revisi',
-                'catatan' => $catatan,
-                'acted_at' => now(),
-            ]);
+            $this->catatLog($pengajuan, $approver, $step, 'revisi', $catatan);
 
             return $pengajuan->refresh();
         });
 
-        broadcast(new PengajuanStatusChanged($fresh, 'guru', 'revisi'))->toOthers();
+        $this->broadcastKeRole($fresh, ['guru'], 'revisi');
     }
 
     private function pastikanStep(PengajuanSurat $pengajuan, int $expectedStep): void
     {
         if ($pengajuan->current_step !== $expectedStep) {
             throw new \RuntimeException(
-                "Pengajuan Tidak Dalam Tahap yang Sesuai (expected step {$expectedStep}, got {$pengajuan->current_step})."
+                "Aksi Ditolak: Pengajuan tidak dalam tahap yang sesuai (Expected: Step {$expectedStep}, Actual: Step {$pengajuan->current_step})."
             );
+        }
+    }
+
+    private function validasiTahapApproval(PengajuanSurat $pengajuan): int
+    {
+        $step = $pengajuan->current_step;
+        if (! in_array($step, [1, 2], true)) {
+            throw new \RuntimeException('Aksi Ditolak: Pengajuan tidak berada dalam tahap approval yang valid.');
+        }
+
+        return $step;
+    }
+
+    private function catatLog(PengajuanSurat $pengajuan, User $user, int $step, string $aksi, ?string $catatan): void
+    {
+        ApprovalLog::create([
+            'pengajuan_id' => $pengajuan->id,
+            'step' => $step,
+            'approver_id' => $user->id,
+            'aksi' => $aksi,
+            'catatan' => $catatan,
+            'acted_at' => now(),
+        ]);
+    }
+
+    private function broadcastKeRole(PengajuanSurat $pengajuan, array $roles, string $aksi): void
+    {
+        foreach ($roles as $role) {
+            broadcast(new PengajuanStatusChanged($pengajuan, $role, $aksi))->toOthers();
         }
     }
 }

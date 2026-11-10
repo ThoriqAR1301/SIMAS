@@ -2,10 +2,14 @@
 
 @php
 $classes = ($active ?? false)
-            ? 'inline-flex items-center px-1 pt-1 border-b-2 border-indigo-400 dark:border-indigo-600 text-sm font-medium leading-5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-indigo-700 transition duration-150 ease-in-out'
-            : 'inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700 focus:outline-none focus:text-gray-700 dark:focus:text-gray-300 focus:border-gray-300 dark:focus:border-gray-700 transition duration-150 ease-in-out';
+            ? 'relative inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-[#0B1120] text-sm font-black tracking-wide text-white shadow-[0_8px_20px_-6px_rgba(11,17,32,0.4)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]'
+            : 'relative inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-bold tracking-wide text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]';
 @endphp
 
 <a {{ $attributes->merge(['class' => $classes]) }}>
     {{ $slot }}
+    
+    @if($active ?? false)
+        <span class="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-[#F4B22E] shadow-[0_0_8px_#F4B22E]"></span>
+    @endif
 </a>

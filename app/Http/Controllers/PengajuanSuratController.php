@@ -1,28 +1,35 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PengajuanSurat\StorePengajuanRequest;
 use App\Http\Requests\PengajuanSurat\UpdatePengajuanRequest;
+use App\Models\ApprovalLog;
 use App\Models\BlankoSurat;
 use App\Models\PengajuanSurat;
 use App\Services\LogAktivitasService;
 use App\Services\PengajuanSuratService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class PengajuanSuratController extends Controller
 {
     public function __construct(
-        private PengajuanSuratService $service,
-        private LogAktivitasService $logService,
+        private readonly PengajuanSuratService $service,
+        private readonly LogAktivitasService $logService,
     ) {}
 
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $pengajuan = PengajuanSurat::filterIndex(
             $request->only(['status', 'q', 'dari', 'sampai']),
-            $this->authenticatedUser(),
+            $request->user(),
         )->paginate(15)->withQueryString();
 
         return view('pengajuan.index', [
@@ -31,7 +38,7 @@ class PengajuanSuratController extends Controller
         ]);
     }
 
-    public function create()
+    public function create(): View
     {
         $this->authorize('create', PengajuanSurat::class);
 
@@ -40,22 +47,23 @@ class PengajuanSuratController extends Controller
         ]);
     }
 
-    public function store(StorePengajuanRequest $request)
+    public function store(StorePengajuanRequest $request): RedirectResponse
     {
-        $pengajuan = $this->service->buat($this->authenticatedUser(), $request->validated());
+        $user = $request->user();
+        $pengajuan = $this->service->buat($user, $request->validated());
 
-        $this->logService->catat('create', $pengajuan, null, $pengajuan->toArray());
+        $this->logService->catat('create_pengajuan', $pengajuan, null, $pengajuan->toArray());
 
         if ($request->input('aksi') === 'submit') {
             $this->service->submit($pengajuan);
 
-            return redirect()->route('pengajuan.show', $pengajuan)->with('success', 'Pengajuan Berhasil Diajukan & Menunggu Verifikasi');
+            return $this->successResponse('Pengajuan berhasil diajukan & menunggu verifikasi', 'pengajuan.show', [$pengajuan]);
         }
 
-        return redirect()->route('pengajuan.show', $pengajuan)->with('success', 'Pengajuan Disimpan Sebagai Draft');
+        return $this->successResponse('Pengajuan berhasil disimpan sebagai draft', 'pengajuan.show', [$pengajuan]);
     }
 
-    public function show(PengajuanSurat $pengajuan)
+    public function show(PengajuanSurat $pengajuan): View
     {
         $this->authorize('view', $pengajuan);
 
@@ -68,7 +76,7 @@ class PengajuanSuratController extends Controller
         return view('pengajuan.show', compact('pengajuan'));
     }
 
-    public function edit(PengajuanSurat $pengajuan)
+    public function edit(PengajuanSurat $pengajuan): View
     {
         $this->authorize('update', $pengajuan);
 
@@ -78,78 +86,82 @@ class PengajuanSuratController extends Controller
         ]);
     }
 
-    public function update(UpdatePengajuanRequest $request, PengajuanSurat $pengajuan)
+    public function update(UpdatePengajuanRequest $request, PengajuanSurat $pengajuan): RedirectResponse
     {
         $this->authorize('update', $pengajuan);
 
-        $before = $pengajuan->toArray();
         $this->service->update($pengajuan, $request->validated());
-        $this->logService->catat('update', $pengajuan, $before, $pengajuan->fresh()->toArray());
 
         if ($request->input('aksi') === 'submit') {
             $this->service->submit($pengajuan);
 
-            return redirect()->route('pengajuan.show', $pengajuan)->with('success', 'Pengajuan Berhasil Diperbarui & Diajukan');
+            return $this->successResponse('Pengajuan berhasil diperbarui & diajukan', 'pengajuan.show', [$pengajuan]);
         }
 
-        return redirect()->route('pengajuan.show', $pengajuan)->with('success', 'Pengajuan Berhasil Diperbarui');
+        return $this->successResponse('Pengajuan berhasil diperbarui', 'pengajuan.show', [$pengajuan]);
     }
 
-    public function destroy(PengajuanSurat $pengajuan)
+    public function destroy(PengajuanSurat $pengajuan): RedirectResponse
     {
         $this->authorize('delete', $pengajuan);
 
-        $this->logService->catat('delete', $pengajuan, $pengajuan->toArray(), null);
         $this->service->hapus($pengajuan);
 
-        return redirect()->route('pengajuan.index')->with('success', 'Pengajuan Berhasil Dihapus');
+        return $this->successResponse('Pengajuan berhasil dihapus', 'pengajuan.index');
     }
 
-    public function submit(PengajuanSurat $pengajuan)
+    public function submit(PengajuanSurat $pengajuan): RedirectResponse
     {
         $this->authorize('submit', $pengajuan);
 
         $this->service->submit($pengajuan);
 
-        return back()->with('success', 'Pengajuan Berhasil Diajukan');
+        return back()->with('success', 'Pengajuan berhasil diajukan');
     }
 
-    public function timeline(PengajuanSurat $pengajuan)
+    public function timeline(PengajuanSurat $pengajuan): JsonResponse
     {
         $this->authorize('view', $pengajuan);
 
         return response()->json([
             'status' => $pengajuan->status->value,
             'label' => $pengajuan->status->label(),
-            'logs' => $pengajuan->approvalLogs()->with('approver')->get()->map(fn ($log) => [
-                'step' => $log->step,
-                'label_step' => $log->labelStep(),
-                'aksi' => $log->aksi,
-                'label_aksi' => $log->labelAksi(),
-                'catatan' => $log->catatan,
-                'approver' => $log->approver->name,
-                'acted_at' => $log->acted_at->format('d M Y H:i'),
-            ]),
+            'logs' => $pengajuan->approvalLogs()
+                ->with('approver')
+                ->get()
+                ->map(fn ($log) => $this->formatTimelineLog($log)),
         ]);
     }
 
-    public function pdf(PengajuanSurat $pengajuan)
+    public function pdf(PengajuanSurat $pengajuan): Response
     {
         $this->authorize('view', $pengajuan);
 
-        abort_unless($pengajuan->sudahDisetujui(), 403, 'Surat Belum Disetujui');
+        abort_unless($pengajuan->sudahDisetujui(), 403, 'Surat belum disetujui.');
 
         $pengajuan->load(['user', 'blanko', 'reviewer']);
 
-        $qrPath = storage_path('app/public/qr/'.$pengajuan->qr_token.'.png');
-
         $pdf = Pdf::loadView('pengajuan.pdf', [
             'pengajuan' => $pengajuan,
-            'qrPath' => file_exists($qrPath) ? $qrPath : null,
+
         ])->setPaper('a4', 'portrait');
 
-        $filename = 'Surat-'.str_replace('/', '-', $pengajuan->nomor_surat).'.pdf';
+        $safeNomor = str_replace(['/', '\\'], '-', (string) $pengajuan->nomor_surat);
+        $filename = 'Surat-'.$safeNomor.'.pdf';
 
         return $pdf->download($filename);
+    }
+
+    private function formatTimelineLog(ApprovalLog $log): array
+    {
+        return [
+            'step' => $log->step,
+            'label_step' => $log->label_step,
+            'aksi' => $log->aksi,
+            'label_aksi' => $log->label_aksi,
+            'catatan' => $log->catatan,
+            'approver' => $log->approver->name ?? 'Sistem',
+            'acted_at' => $log->acted_at->format('d M Y H:i'),
+        ];
     }
 }

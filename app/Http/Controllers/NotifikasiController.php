@@ -1,28 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 
 class NotifikasiController extends Controller
 {
     public function index(Request $request): View|JsonResponse
     {
-        $notifications = $this->authenticatedUser()->notifications()->latest()->paginate(20);
+        $notifications = $request->user()
+            ->notifications()
+            ->latest()
+            ->paginate(20);
 
         if ($request->wantsJson()) {
             return response()->json([
-                'data' => $notifications->map(fn ($notification) => [
-                    'id' => $notification->id,
-                    'judul' => $notification->data['judul'] ?? 'Notifikasi',
-                    'pesan' => $notification->data['pesan'] ?? '',
-                    'url' => $notification->data['url'] ?? '#',
-                    'aksi' => $notification->data['aksi'] ?? 'submitted',
-                    'waktu' => $notification->created_at->diffForHumans(),
-                    'read_at' => $notification->read_at?->toIso8601String(),
-                ]),
+                'status' => 'success',
+                'data' => $notifications->map(fn (DatabaseNotification $n) => $this->formatNotification($n)),
                 'total' => $notifications->total(),
             ]);
         }
@@ -30,27 +29,50 @@ class NotifikasiController extends Controller
         return view('notifikasi.index', compact('notifications'));
     }
 
-    public function unreadCount(): JsonResponse
+    public function unreadCount(Request $request): JsonResponse
     {
+        $count = $request->user()->unreadNotifications()->count();
+
         return response()->json([
-            'count' => $this->authenticatedUser()->unreadNotifications()->count(),
+            'status' => 'success',
+            'count' => $count,
         ]);
     }
 
-    public function markAsRead(string $id): JsonResponse
+    public function markAsRead(Request $request, string $id): JsonResponse
     {
-        $notification = $this->authenticatedUser()->notifications()->findOrFail($id);
+        $notification = $request->user()->notifications()->findOrFail($id);
+
         $notification->markAsRead();
 
-        return response()->json(['ok' => true]);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Notifikasi berhasil ditandai sebagai dibaca',
+        ]);
     }
 
-    public function markAllAsRead(): JsonResponse
+    public function markAllAsRead(Request $request): JsonResponse
     {
-        $this->authenticatedUser()->unreadNotifications()->update([
+        $request->user()->unreadNotifications()->update([
             'read_at' => now(),
         ]);
 
-        return response()->json(['ok' => true]);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Semua notifikasi berhasil ditandai sebagai dibaca',
+        ]);
+    }
+
+    private function formatNotification(DatabaseNotification $notification): array
+    {
+        return [
+            'id' => $notification->id,
+            'judul' => $notification->data['judul'] ?? 'Notifikasi',
+            'pesan' => $notification->data['pesan'] ?? '',
+            'url' => $notification->data['url'] ?? '#',
+            'aksi' => $notification->data['aksi'] ?? 'submitted',
+            'waktu' => $notification->created_at->diffForHumans(),
+            'read_at' => $notification->read_at?->toIso8601String(),
+        ];
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Events;
 
 use App\Models\PengajuanSurat;
@@ -10,5 +12,13 @@ class PengajuanNomorGenerated
 {
     use Dispatchable, SerializesModels;
 
-    public function __construct(public PengajuanSurat $pengajuan) {}
+    public readonly string $nomorSurat;
+
+    public readonly string $namaKegiatan;
+
+    public function __construct(public readonly PengajuanSurat $pengajuan)
+    {
+        $this->nomorSurat = $pengajuan->nomor_surat ?? 'Belum Ada Nomor';
+        $this->namaKegiatan = $pengajuan->nama_kegiatan;
+    }
 }
